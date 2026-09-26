@@ -2,7 +2,7 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!78 &1
 TagManager:
-  serializedVersion: 2
+  serializedVersion: 3
   tags:
   - Collectable_item
   - Traps
@@ -15,13 +15,13 @@ TagManager:
   - Water
   - UI
   - Ground
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Player
+  - Enemy
+  - EnemyHit
+  - Hazard
+  - Pickup
+  - OneWay
+  - Projectile
   - 
   - 
   - 
@@ -50,3 +50,5 @@ TagManager:
   - name: Terrain
     uniqueID: 769121017
     locked: 0
+  m_RenderingLayers:
+  - Default
