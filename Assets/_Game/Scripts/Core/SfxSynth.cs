@@ -86,6 +86,15 @@ namespace MiniPlatformer
             Add("arrow", new Params { wave = Wave.Triangle, duration = 0.25f, freqStart = 440, freqEnd = 1400, volume = 0.55f });
             Add("appear", new Params { wave = Wave.Sine, duration = 0.35f, freqStart = 300, freqEnd = 1200, volume = 0.4f, vibratoDepth = 0.05f, vibratoSpeed = 30f });
             Add("tick", new Params { wave = Wave.Square, duration = 0.04f, freqStart = 1500, freqEnd = 1500, duty = 0.5f, volume = 0.2f });
+            // fruit stack
+            Add("topple", new Params { wave = Wave.Triangle, duration = 0.55f, freqStart = 700, freqEnd = 110, volume = 0.55f, vibratoDepth = 0.18f, vibratoSpeed = 14f });
+            Add("splat", new Params { wave = Wave.Noise, duration = 0.18f, freqStart = 3000, freqEnd = 400, volume = 0.45f });
+            Add("creak", new Params { wave = Wave.Saw, duration = 0.12f, freqStart = 180, freqEnd = 150, volume = 0.22f, vibratoDepth = 0.3f, vibratoSpeed = 40f });
+            Add("bank", new Params { wave = Wave.Square, duration = 0.5f, freqStart = 523, duty = 0.25f, volume = 0.35f, arpeggio = new[] { 1f, 1.26f, 1.5f, 2f, 2.52f, 3f } });
+            Add("coin", new Params { wave = Wave.Square, duration = 0.12f, freqStart = 988, duty = 0.5f, volume = 0.25f, arpeggio = new[] { 1f, 1.335f } });
+            Add("spin", new Params { wave = Wave.Square, duration = 0.03f, freqStart = 2200, freqEnd = 1800, duty = 0.5f, volume = 0.18f });
+            Add("thunder", new Params { wave = Wave.Noise, duration = 1.6f, attack = 0.03f, freqStart = 520, freqEnd = 50, volume = 0.6f });
+            Add("jackpot", new Params { wave = Wave.Square, duration = 0.9f, freqStart = 523, duty = 0.35f, volume = 0.35f, arpeggio = new[] { 1f, 1.26f, 1.5f, 2f, 1.5f, 2f, 2.52f, 3f, 4f } });
             return d;
         }
     }

@@ -13,9 +13,10 @@ namespace MiniPlatformer
     public static class Platform
     {
         /// <summary>
-        /// Master switch for video ads. CrazyGames keeps monetization disabled during Basic Launch, so ads stay OFF:
-        /// no midgame requests and no rewarded buttons (a rewarded button must never be clickable without effect).
-        /// Flip to true for the Full Launch build.
+        /// Master switch for video ads. OFF for CrazyGames' Basic Launch, where monetization is disabled: no midgame
+        /// ads and no video buttons; every reward is earned by playing instead (bonus chests, spin tokens, coin
+        /// revives, daily gift). Flip to true for Full Launch: midgame ads at natural breaks and optional rewarded
+        /// videos reappear next to the play-earned options.
         /// </summary>
         public static readonly bool AdsEnabled = false;
 
@@ -25,6 +26,11 @@ namespace MiniPlatformer
 
         static bool s_Gameplay;
         static string s_Device = "";
+        static float s_RewardedPausedUntil;
+        const float RewardedRetryDelay = 180f;
+        const string BasicLaunchError = "adsDisabledBasicLaunch";
+        /// <summary>CrazyGames said monetization is off (Basic Launch): rewards are granted directly, midgames skipped.</summary>
+        public static bool AdsDisabledByHost { get; private set; }
 
         static bool Supported => Application.isEditor || Application.platform == RuntimePlatform.WebGLPlayer;
 
@@ -41,7 +47,13 @@ namespace MiniPlatformer
             Ready = done;
             if (!Ready) { Debug.LogWarning("[Platform] CrazySDK init timed out, continuing without it"); yield break; }
             Try(() => s_Device = CrazySDK.User.SystemInfo?.device?.type ?? "");
+            // CrazyGames' mute toggle takes priority over the in-game volume sliders
+            Try(() => HostMuted = CrazySDK.Game.Settings?.muteAudio ?? false);
+            Try(() => CrazySDK.Game.AddSettingsChangeListener(s => HostMuted = s != null && s.muteAudio));
         }
+
+        /// <summary>The CrazyGames site asked the game to be silent (its mute setting).</summary>
+        public static bool HostMuted { get; private set; }
 
         /// <summary>Phone or tablet (from the CrazyGames device info when available).</summary>
         public static bool IsMobileDevice => s_Device == "mobile" || s_Device == "tablet" || Application.isMobilePlatform;
@@ -68,9 +80,15 @@ namespace MiniPlatformer
             if (Ready) Try(() => CrazySDK.Game.HappyTime());
         }
 
-        public static void SetLevelContext(int level)
+        /// <summary>Attached to player feedback reports on CrazyGames, so a report says where it happened.</summary>
+        public static void SetLevelContext(string level)
         {
-            if (Ready) Try(() => CrazySDK.Game.SetGameContext(new System.Collections.Generic.Dictionary<string, string> { { "level", LevelCatalog.Code(level) } }));
+            if (Ready) Try(() => CrazySDK.Game.SetGameContext(new System.Collections.Generic.Dictionary<string, string> { { "level", level } }));
+        }
+
+        public static void ClearLevelContext()
+        {
+            if (Ready) Try(() => CrazySDK.Game.ClearGameContext());
         }
 
         // ---------------------------------------------------------------- ads
@@ -80,7 +98,7 @@ namespace MiniPlatformer
         {
             get
             {
-                if (!AdsEnabled || !Ready || AdPlaying) return false;
+                if (!AdsEnabled || !Ready || AdPlaying || Time.realtimeSinceStartup < s_RewardedPausedUntil) return false;
                 var status = AdblockStatus.Detecting;
                 Try(() => status = CrazySDK.Ad.AdblockStatus);
                 return status != AdblockStatus.Present;
@@ -88,33 +106,62 @@ namespace MiniPlatformer
         }
 
         /// <summary>Midgame ad at a natural break. 'done' always runs (ad shown, skipped, unfilled or blocked).</summary>
-        public static void Midgame(Action done) => ShowAd(CrazyAdType.Midgame, done, done);
-
-        /// <summary>Rewarded ad. 'rewarded' runs only when the ad finished; 'failed' otherwise.</summary>
-        public static void Rewarded(Action rewarded, Action failed) => ShowAd(CrazyAdType.Rewarded, rewarded, failed);
-
-        static void ShowAd(CrazyAdType type, Action ok, Action fail)
+        public static void Midgame(Action done)
         {
-            if (!AdsEnabled || !Ready || AdPlaying) { Invoke(fail); return; }
+            if (AdsDisabledByHost) { Invoke(done); return; }
+            ShowAd(CrazyAdType.Midgame, done, code =>
+            {
+                if (code == BasicLaunchError) AdsDisabledByHost = true;
+                Invoke(done);
+            });
+        }
+
+        /// <summary>
+        /// Rewarded ad. 'rewarded' runs only when the ad finished, or when the host has ads switched off entirely
+        /// (Basic Launch), so the button still does what it says. Any other error (unfilled, adblock, cooldown) runs
+        /// 'failed' and hides the video buttons for a few minutes.
+        /// </summary>
+        public static void Rewarded(Action rewarded, Action failed)
+        {
+            if (AdsDisabledByHost) { Invoke(rewarded); return; }
+            ShowAd(CrazyAdType.Rewarded, rewarded, code =>
+            {
+                if (code == BasicLaunchError) { AdsDisabledByHost = true; Invoke(rewarded); return; }
+                s_RewardedPausedUntil = Time.realtimeSinceStartup + RewardedRetryDelay;
+                Invoke(failed);
+            });
+        }
+
+        static void ShowAd(CrazyAdType type, Action ok, Action<string> fail)
+        {
+            if (!AdsEnabled || !Ready || AdPlaying) { InvokeFail(fail, null); return; }
             AdPlaying = true;
             bool ended = false;
             bool wasGameplay = s_Gameplay;
             GameplayStop();
             UIRoot.I?.SetAdBlocker(true);
 
-            void End(bool success)
+            void End(bool success, string code)
             {
                 if (ended) return;
                 ended = true;
                 AdPlaying = false;
                 UIRoot.I?.SetAdBlocker(false);
                 if (wasGameplay) GameplayStart();
-                Invoke(success ? ok : fail);
+                if (!success) Debug.Log("[Platform] ad not shown: " + (code ?? "?"));
+                if (success) Invoke(ok); else InvokeFail(fail, code);
             }
 
             // failsafe: never leave the player stuck behind the blocker if the SDK doesn't call back
-            UIRoot.I?.RunRealtime(90f, () => { if (!ended) { Debug.LogWarning("[Platform] ad callback timeout"); End(false); } });
-            if (!Try(() => CrazySDK.Ad.RequestAd(type, null, _ => End(false), () => End(true)))) End(false);
+            UIRoot.I?.RunRealtime(90f, () => { if (!ended) { Debug.LogWarning("[Platform] ad callback timeout"); End(false, "timeout"); } });
+            if (!Try(() => CrazySDK.Ad.RequestAd(type, null, err => End(false, err?.code), () => End(true, null)))) End(false, "exception");
+        }
+
+        static void InvokeFail(Action<string> fail, string code)
+        {
+            if (fail == null) return;
+            try { fail(code); }
+            catch (Exception e) { Debug.LogException(e); }
         }
 
         // ---------------------------------------------------------------- saves

@@ -1,80 +1,65 @@
-# Fruit Quest (VishwaMoger_MiniPlatformer)
+# Tile Trek (VishwaMoger_MiniPlatformer)
 
-A 2D pixel-art platformer for Unity 6.3 (URP 2D): 15 levels across 5 worlds, a boss fight,
-4 unlockable heroes, and a smooth, modern UI.
+A live sliding-tile puzzle for Unity 6.3 (URP 2D). The level is a grid of small pixel rooms with one empty slot.
+Your hero walks on their own: forward, up one-tile ledges, around at walls, down through floor holes. You never
+control them. You **slide rooms into the empty slot** (tap, swipe or arrow keys) to build their way to the trophy
+in real time, keeping them out of trap rooms (spikes, saws, fire, critters) and away from the void.
+
+- A **route trail** (bead shader) shows where the hero will walk through the rooms you've linked; it turns gold
+  and ends in a star when it reaches the trophy, red with a cross when it leads into danger.
+- **Cheers** as you get closer: halfway there, almost there, path complete.
+- Once the route is complete the rooms **melt into one seamless hall**, the board locks, and the hero runs home.
+- Stars per puzzle: **solved**, **fast** (under the target time), **smart** (at or under par slides).
+- Endless generated levels (a solvable board from every level number), a **daily puzzle**, 4 heroes.
+- Five **season worlds** with weather and lighting: Spring Meadow (petals), Autumn Woods (leaves), Rainy Peaks
+  (rain, lightning, lamps), Firefly Night, Snowy Castle (snowfall, frost, snow caps).
+- **Phones play portrait**: tall boards (columns and rows swapped), a 1150-wide portrait UI, full-window web page.
+- HUD: speed (1x / 2x / 3x), boosters **Freeze**, **Hint** (solver-backed), **Solve** (auto-solve, 1 star).
+- Meta: coins, shop, 7-day login streak, lucky spin, daily missions. With ads off (Basic Launch) every reward is
+  earned by playing: a **bonus chest** on each results screen, a **spin token** for every 3 puzzles solved,
+  **revive for 40 coins**, mission swaps for 25 coins, a **free booster gift** in the shop once a day.
 
 ## Play
 
-Open the project in Unity 6000.3, open `Assets/_Game/Scenes/Game.unity` and press Play.
-The whole game runs in this one scene: menus sit over a live backdrop, and levels are built
-at runtime from small text files, so restarts are instant and the build stays small.
+Open the project in Unity 6000.3, open `Assets/_Game/Scenes/Game.unity` and press Play. Everything runs in this one
+scene; puzzles are generated at runtime from their level number.
 
-| Action | Keyboard | Gamepad | Touch |
-|---|---|---|---|
-| Move | A/D or Arrow keys | Left stick | ◀ ▶ buttons |
-| Jump / double jump | Space, W, Z or Up | A | ▲ button |
-| Wall jump | Hold toward a wall, then jump | | |
-| Dash (air) | Shift, X or K | X | Dash button |
-| Drop through a platform | Down + Jump | | |
-| Pause | Esc or P | Start | Pause button |
+| Action | Keyboard | Touch / mouse |
+|---|---|---|
+| Slide a room into the gap | Arrow keys / WASD (pushes the neighbour into the gap) | Tap or swipe a highlighted room |
+| Pause | Esc or P | Pause button |
 
-Stars per level: **finish**, **collect all fruit**, and **take no damage**. Stars unlock new heroes.
-
-## Worlds
-
-1. **Sunny Shores**: grass cliffs by the sea (basics, moving platforms, trampolines, wall jumps)
-2. **Autumn Woods**: golden forest (falling platforms, fire traps, fans, rinos, shooters)
-3. **Sunset Peaks**: pink mountains (rock heads, bees, bluebirds, spike-head crushers)
-4. **Jungle Ruins**: dark, lantern-lit temple (turtles, ghosts, bats, fat birds)
-5. **Moonlit Castle**: the Skull King's keep (gauntlets and the boss)
-
-## Project layout
+## Code map
 
 ```
-Assets/_Game/
-  Art/            Pixel Adventure 1+2, parallax backgrounds, Lilita One font
-  Audio/          chiptune music, SFX, UI sounds, jingles
-  Editor/         ProjectSetup.cs (Tools > Fruit Quest > Run Full Setup)
-  Rendering/      URP 2D pipeline asset, renderer, materials
-  Resources/      GameAssets.asset (asset registry) + Levels/level_XX.txt
-  Scenes/         Game.unity (the only scene)
-  Scripts/        Core, Player, Level, Entities, Enemies, UI
-  Shaders/        SpriteLitFX (2D lights + hit flash), ParallaxLayer, Water, Additive, IrisWipe
-Tools/levelgen/   Python level authoring kit + reachability checker
+Assets/_Game/Scripts/
+  Puzzle/  TrekLevel (generator, hero-walk simulation, hint solver), TrekBoard (input, slides, route, completion,
+           auto-solve), TrekRoom (tiles, doorways, lamps, wall melting), TrekHero, TrekThings (coins, trophy,
+           hazards, critters), TrekPath (route trail)
+  Core/    Game (flow), Economy (coins, daily loops, boosters, missions), Save, Platform (CrazyGames SDK), FX, audio
+  UI/      UIRoot (+ .Trek HUD/results, .Menus, .Meta popups), UIKit, UIArt (procedural UI art)
+Assets/_Game/Shaders/TrekPath.shader   route trail beads
+Assets/WebGLTemplates/TileTrek          full-window web page (portrait + landscape)
 ```
 
-The UI art, icons, decorations and most sound effects are generated in code at startup,
-so they add nothing to the download size.
+The level generator lays out a solved route (sideways and down only), fills the rest with decoy and trap rooms
+and scrambles with real slides, so every level is solvable. `TrekLevel.Walk` simulates the hero room by room
+exactly like the physics, and drives the solved check, the hint solver, progress cheers and the route trail.
 
-## Editing levels
-
-Levels are written in Python in `Tools/levelgen/levels_w*.py`, then exported to text:
-
-```bash
-python Tools/levelgen/build_levels.py
-```
-
-The build script auto-polishes item placement (removes fruit overlapping other objects, lifts
-objects out of terrain) and checks that every level can be finished with the player's real
-jump reach. After it runs, use **Tools > Fruit Quest > Rebuild Asset Registry** in Unity.
-You can also edit the `.txt` files directly. The map legend is documented in
-`Assets/_Game/Scripts/Level/LevelData.cs`.
-
-If you add or replace art or audio, run **Tools > Fruit Quest > Run Full Setup** again.
+Editor-only dev console (`Temp/devcmd.txt`, `Tools/dev.sh`): `level N`, `daily`, `slide left|right|up|down`, `solve`,
+`hint`, `path`, `gen A B` (generator report), `autotest A B` (solves each level and checks the hero reaches the trophy).
 
 ## CrazyGames (web)
 
-- SDK: CrazyGames Unity SDK 5.33.0 in `Assets/CrazySDK` (demo folder removed). Two small local patches in
-  `Scripts/Editor/Builder` are marked "Fruit Quest change" (keep null-check exceptions; Unity 6.3 file-list fallback).
-- All SDK use goes through `Assets/_Game/Scripts/Core/Platform.cs` (never throws; no-op on Android/other hosts):
-  gameplay start/stop, happytime, level context, midgame/rewarded ads, cloud + local saves.
-- **Ads are off for Basic Launch** (`Platform.AdsEnabled`). Set it to true for Full Launch: midgame ads on
-  next/retry after results or game over, rewarded revive, rewarded early unlock of the next hero.
+- SDK: CrazyGames Unity SDK 5.33.0 in `Assets/CrazySDK`. All SDK use goes through `Core/Platform.cs` (never throws).
+- **Ads off for Basic Launch** (`Platform.AdsEnabled = false`): CrazyGames disables monetization during Basic Launch,
+  so there are no midgame ads and no video buttons; the play-earned loops above replace them. Only the
+  Gameplay start/stop events are sent. For Full Launch set `AdsEnabled = true`: midgame ads on next/retry after a
+  result screen and optional rewarded videos (revive, x2 coins, daily x2, extra spins, boosters, mission swap)
+  reappear next to the play-earned options.
+- QUIT appears only in the Android app; the web build never shows it.
 - Build: **Tools > Fruit Quest > CrazyGames > 3. Release Build (single pass)** -> `Builds/CrazyGamesRelease`
   (upload every file). Local test: `python Tools/serve_webgl.py` then open http://localhost:8080.
-- Store kit (covers, trailers, texts): `Builds/CrazyGames_Submission`. Regenerate in play mode with the dev console:
-  `cover 0`, `clip <name> <level> <sec> <w> <h> <halfWidth>`, `trailer <out.mp4> <w> <h> <cover.png> <clip:start:count>...`
-- Android: switch the platform back to Android before `Tools/u.sh` APK builds.
 
 ## Credits (all free for commercial use)
 

@@ -30,6 +30,7 @@ namespace MiniPlatformer
         public Material additive;
         public Material water;
         public Material irisWipe;
+        public Material trekPath;
 
         [Header("Branding")]
         public Sprite logo;

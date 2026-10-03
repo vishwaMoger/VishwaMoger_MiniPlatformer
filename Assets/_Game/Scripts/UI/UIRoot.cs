@@ -17,6 +17,11 @@ namespace MiniPlatformer
         public static UIRoot I { get; private set; }
 
         Canvas m_Canvas, m_TopCanvas;
+        readonly System.Collections.Generic.List<CanvasScaler> m_Scalers = new System.Collections.Generic.List<CanvasScaler>();
+        bool m_Portrait;
+
+        /// <summary>Tall screen (phone held upright): layouts switch to a 1150-wide portrait canvas (big, thumb-sized UI).</summary>
+        public static bool Portrait => Screen.height > Screen.width;
         RectTransform m_Backdrop, m_MenuLayer, m_HudLayer, m_PopupLayer, m_ToastLayer;
         RawImage m_Iris;
         Material m_IrisMat;
@@ -32,6 +37,7 @@ namespace MiniPlatformer
 
         void Awake()
         {
+            m_Portrait = Portrait;
             m_Canvas = MakeCanvas("Canvas", 10);
             m_Backdrop = UIKit.Stretch(m_Canvas.transform, "Backdrop");
             m_MenuLayer = UIKit.Stretch(m_Canvas.transform, "Menus");
@@ -46,6 +52,8 @@ namespace MiniPlatformer
             m_Iris.material = m_IrisMat;
             m_Iris.raycastTarget = false;
             SetIris(0f, new Vector2(0.5f, 0.5f)); // start closed; Game opens it
+
+            Economy.OnCoinsChanged += OnMenuCoinsChanged;
 
             if (FindAnyObjectByType<EventSystem>() == null)
             {
@@ -67,10 +75,46 @@ namespace MiniPlatformer
             c.pixelPerfect = false;
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // whole 1920x1080 layout always fits (any browser window shape)
+            m_Scalers.Add(scaler);
+            ApplyScale(scaler);
             go.AddComponent<GraphicRaycaster>();
             return c;
+        }
+
+        void ApplyScale(CanvasScaler scaler)
+        {
+            if (Portrait)
+            {
+                // portrait: a 1150-unit wide canvas, as tall as the screen allows; wide panels shrink to fit (FitBox)
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                scaler.matchWidthOrHeight = 0f;
+                scaler.referenceResolution = new Vector2(1150f, 2044f);
+            }
+            else
+            {
+                scaler.referenceResolution = new Vector2(1920, 1080);
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // whole 1920x1080 layout always fits (any browser window shape)
+            }
+        }
+
+        /// <summary>Phone rotated: switch canvas scaling and rebuild whatever is on screen in the new layout.</summary>
+        void LateUpdate()
+        {
+            bool portrait = Portrait;
+            if (portrait == m_Portrait) return;
+            m_Portrait = portrait;
+            foreach (var s in m_Scalers) ApplyScale(s);
+            if (Game.I == null) return;
+            if (Game.I.InLevel) { if (m_Results == null && m_Pause == null && Game.I.Board != null) ShowTrekHUD(Game.I.Board); }
+            else if (m_MenuLayer.childCount > 0 && m_Meta == null && m_Settings == null && m_Confirm == null) ShowMenu(m_Screen);
+        }
+
+        /// <summary>Full-screen holder that shrinks wide content to fit a portrait screen (no-op in landscape).</summary>
+        static RectTransform FitBox(Transform root, float contentWidth)
+        {
+            var box = UIKit.Stretch(root, "FitBox");
+            if (Portrait) box.localScale = Vector3.one * Mathf.Min(1f, 1100f / contentWidth);
+            return box;
         }
 
         static void Clear(Transform t)
@@ -78,9 +122,8 @@ namespace MiniPlatformer
             for (int i = t.childCount - 1; i >= 0; i--) Destroy(t.GetChild(i).gameObject);
         }
 
-        public static bool TouchUI => SaveSystem.Data.touchControls == 1 ||
-                                      (SaveSystem.Data.touchControls == 0 && (Platform.IsMobileDevice ||
-                                                                               (Application.platform != RuntimePlatform.WebGLPlayer && Input.touchSupported)));
+        /// <summary>Phone/tablet: no keyboard focus highlight on buttons.</summary>
+        public static bool TouchUI => Platform.IsMobileDevice || (Application.platform != RuntimePlatform.WebGLPlayer && Input.touchSupported);
 
         void Select(Selectable s)
         {
@@ -234,6 +277,71 @@ namespace MiniPlatformer
             var g = UIKit.Group(rt.gameObject);
             g.blocksRaycasts = false;
             StartCoroutine(ToastRoutine(rt, g));
+        }
+
+        /// <summary>Floating text that follows a world position (coin payouts, "WHOOPS! -5").</summary>
+        public void WorldPopup(Vector2 world, string text, Color color, float size = 40f, float delay = 0f)
+        {
+            if (Game.I == null || Game.I.Cam == null) return;
+            StartCoroutine(WorldPopupRoutine(world, text, color, size, delay));
+        }
+
+        IEnumerator WorldPopupRoutine(Vector2 world, string text, Color color, float size, float delay)
+        {
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+            var cam = Game.I != null ? Game.I.Cam : null;
+            if (cam == null) yield break;
+            var rt = UIKit.Rect(m_ToastLayer, "Popup", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 120f));
+            var t = UIKit.Text(rt, text, size, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 120f), TextStyle.Heading, color);
+            t.textWrappingMode = TextWrappingModes.NoWrap;
+            var g = UIKit.Group(rt.gameObject);
+            g.blocksRaycasts = false;
+            const float life = 1.15f;
+            for (float time = 0f; time < life; time += Time.unscaledDeltaTime)
+            {
+                if (rt == null || cam == null) yield break;
+                Vector2 screen = cam.WorldToScreenPoint(world + Vector2.up * (time * 1.3f));
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(m_ToastLayer, screen, null, out var local))
+                    rt.anchoredPosition = local;
+                float appear = Mathf.Clamp01(time / 0.18f);
+                rt.localScale = Vector3.one * Mathf.LerpUnclamped(0.4f, 1f, Ease.OutBack(appear));
+                g.alpha = time < life - 0.3f ? 1f : (life - time) / 0.3f;
+                yield return null;
+            }
+            if (rt != null) Destroy(rt.gameObject);
+        }
+
+        /// <summary>Big encouraging line in the middle of the screen ("HALFWAY THERE!").</summary>
+        GameObject m_Cheer;
+
+        public void Cheer(string msg, Color color)
+        {
+            if (m_Cheer != null) Destroy(m_Cheer); // newest cheer wins
+            float cw = Portrait ? 1050f : 1400f;
+            var rt = UIKit.Rect(m_ToastLayer, "Cheer", new Vector2(0.5f, 0.5f), new Vector2(0f, Portrait ? 420f : 180f), new Vector2(cw, 220f));
+            var t = UIKit.Text(rt, msg, 50f, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(cw, 220f), TextStyle.Title, color);
+            t.textWrappingMode = TextWrappingModes.Normal;
+            m_Cheer = rt.gameObject;
+            var g = UIKit.Group(rt.gameObject);
+            g.blocksRaycasts = false;
+            AudioManager.I?.Play("jingle_small", 0.55f, 0f);
+            StartCoroutine(CheerRoutine(rt, g));
+        }
+
+        IEnumerator CheerRoutine(RectTransform rt, CanvasGroup g)
+        {
+            Vector2 p = rt.anchoredPosition;
+            for (float t = 0f; t < 2.2f; t += Time.unscaledDeltaTime)
+            {
+                if (rt == null) yield break;
+                float appear = Mathf.Clamp01(t / 0.3f);
+                rt.localScale = Vector3.one * Mathf.LerpUnclamped(0.4f, 1f, Ease.OutBack(appear));
+                rt.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 9f) * 2f * (1f - appear * 0.7f));
+                rt.anchoredPosition = p + Vector2.up * (t > 1.6f ? (t - 1.6f) * 120f : 0f);
+                g.alpha = t < 1.7f ? appear : 1f - (t - 1.7f) / 0.5f;
+                yield return null;
+            }
+            if (rt != null) Destroy(rt.gameObject);
         }
 
         IEnumerator ToastRoutine(RectTransform rt, CanvasGroup g)

@@ -2,11 +2,13 @@ using UnityEngine;
 
 namespace MiniPlatformer
 {
-    /// <summary>World-themed atmospheric particles (pollen, leaves, petals, fireflies, motes) that follow the camera.</summary>
+    /// <summary>World-themed weather that follows the camera: spring petals, autumn leaves, rain, fireflies, snow (and pollen/motes).</summary>
     public class AmbientFX : MonoBehaviour
     {
         ParticleSystem m_Ps;
         Transform m_Cam;
+        Camera m_Camera;
+        float m_Size;
 
         public static AmbientFX Create(Transform parent, Ambient kind, Transform cam)
         {
@@ -14,6 +16,7 @@ namespace MiniPlatformer
             go.transform.SetParent(parent, false);
             var fx = go.AddComponent<AmbientFX>();
             fx.m_Cam = cam;
+            fx.m_Camera = cam != null ? cam.GetComponent<Camera>() : null;
             fx.Build(kind);
             return fx;
         }
@@ -32,7 +35,7 @@ namespace MiniPlatformer
             var shape = m_Ps.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(40f, 22f, 1f);
+            FitArea();
             var em = m_Ps.emission;
             var noise = m_Ps.noise;
             noise.enabled = true;
@@ -106,6 +109,41 @@ namespace MiniPlatformer
                     var curve = new AnimationCurve(new Keyframe(0, 0.2f), new Keyframe(0.25f, 1f), new Keyframe(0.5f, 0.35f), new Keyframe(0.75f, 1f), new Keyframe(1f, 0.2f));
                     sz.size = new ParticleSystem.MinMaxCurve(1f, curve);
                     break;
+                case Ambient.Snow:
+                    r.sharedMaterial = glow;
+                    main.maxParticles = 420;
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(10f, 15f);
+                    main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.34f);
+                    main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 1f, 1f, 0.95f), new Color(0.8f, 0.9f, 1f, 0.7f));
+                    em.rateOverTime = 34f;
+                    vel.x = new ParticleSystem.MinMaxCurve(-0.6f, 0.2f);
+                    vel.y = new ParticleSystem.MinMaxCurve(-1.4f, -0.7f);
+                    vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+                    noise.strength = 0.7f;
+                    noise.frequency = 0.35f;
+                    break;
+                case Ambient.Rain:
+                {
+                    r.sharedMaterial = pixel;
+                    r.renderMode = ParticleSystemRenderMode.Stretch;
+                    r.velocityScale = 0.05f;
+                    r.lengthScale = 1.2f;
+                    main.maxParticles = 450;
+                    main.startLifetime = new ParticleSystem.MinMaxCurve(1.6f, 2.2f);
+                    main.startSize = new ParticleSystem.MinMaxCurve(0.06f, 0.1f);
+                    main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.75f, 0.85f, 1f, 0.55f), new Color(0.9f, 0.95f, 1f, 0.35f));
+                    em.rateOverTime = 160f;
+                    vel.x = new ParticleSystem.MinMaxCurve(-5f, -4f);
+                    vel.y = new ParticleSystem.MinMaxCurve(-24f, -19f);
+                    vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+                    noise.enabled = false;
+                    var rcol = m_Ps.colorOverLifetime;
+                    var rg = new Gradient();
+                    rg.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                        new[] { new GradientAlphaKey(0, 0), new GradientAlphaKey(1, 0.1f), new GradientAlphaKey(1, 0.9f), new GradientAlphaKey(0, 1) });
+                    rcol.color = rg;
+                    break;
+                }
                 default: // motes
                     r.sharedMaterial = glow;
                     main.startLifetime = new ParticleSystem.MinMaxCurve(7f, 12f);
@@ -122,9 +160,20 @@ namespace MiniPlatformer
             m_Ps.Play();
         }
 
+        /// <summary>Spawn area = the whole view plus a margin (cameras zoom out a lot for big puzzle boards).</summary>
+        void FitArea()
+        {
+            float h = m_Camera != null ? m_Camera.orthographicSize : 11f;
+            float w = m_Camera != null ? h * m_Camera.aspect : h * 1.78f;
+            m_Size = h;
+            var shape = m_Ps.shape;
+            shape.scale = new Vector3(w * 2f + 8f, h * 2f + 8f, 1f);
+        }
+
         void LateUpdate()
         {
             if (m_Cam != null) transform.position = new Vector3(m_Cam.position.x, m_Cam.position.y, 0f);
+            if (m_Camera != null && Mathf.Abs(m_Camera.orthographicSize - m_Size) > 0.5f) FitArea();
         }
     }
 }

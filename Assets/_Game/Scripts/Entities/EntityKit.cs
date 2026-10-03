@@ -69,6 +69,5 @@ namespace MiniPlatformer
                 StaticSprite(parent, s, Sort.Chains, Vector2.Lerp(a, b, i / (float)n), new Color(1, 1, 1, 0.75f));
         }
 
-        public static PlayerController PlayerFrom(Collider2D c) => c != null ? c.GetComponent<PlayerController>() : null;
     }
 }

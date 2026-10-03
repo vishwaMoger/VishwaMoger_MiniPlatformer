@@ -73,3 +73,7 @@ crashlytics-build.properties
 
 # Unity build scratch space
 /.utmp/
+
+# dev screenshots from Tools/u.sh ushot
+/Assets/Temp/
+/Assets/Temp.meta

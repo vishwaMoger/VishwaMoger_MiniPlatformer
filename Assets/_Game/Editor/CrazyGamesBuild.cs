@@ -24,6 +24,7 @@ namespace MiniPlatformer.EditorTools
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
             PlayerSettings.WebGL.decompressionFallback = false;
             PlayerSettings.WebGL.showDiagnostics = false;
+            PlayerSettings.WebGL.template = "PROJECT:TileTrek"; // full-window canvas: portrait and landscape
             PlayerSettings.WebGL.memoryGrowthMode = WebGLMemoryGrowthMode.Geometric;
             PlayerSettings.WebGL.initialMemorySize = 64;
             PlayerSettings.WebGL.maximumMemorySize = 2048;

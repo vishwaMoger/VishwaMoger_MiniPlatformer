@@ -109,8 +109,10 @@ namespace MiniPlatformer
                 if (l.def.factor <= 0.001f && h < halfH * 2f + 2f) { h = halfH * 2f + 3f; bottom = cp.y - halfH - 1.5f; }
                 l.tr.position = new Vector3(cp.x, bottom, 10f);
                 l.tr.localScale = new Vector3(width, h, 1f);
-                float offset = (camX * l.def.factor + m_Time * l.def.autoScroll) / l.widthUnits;
-                float tiling = width / l.widthUnits;
+                // a stretched layer keeps the texture's aspect ratio (no squashed moons): widen its texture units too
+                float wu = l.widthUnits * (h / l.heightUnits);
+                float offset = (camX * l.def.factor + m_Time * l.def.autoScroll) / wu;
+                float tiling = width / wu;
                 offset += 0.5f - tiling * 0.5f; // texture centre sits at the view centre (moons stay centred)
                 l.mpb.SetVector(ScrollId, new Vector4(offset, tiling, 0, 0));
                 l.mr.SetPropertyBlock(l.mpb);

@@ -307,7 +307,7 @@ namespace MiniPlatformer.EditorTools
                 Hex("#FF5A5F"), Hex("#FF9F2E"), Hex("#FFD23F"), Hex("#6BD14B"), Hex("#39B8F0"), Color.white,
                 Hex("#FF6FB5"), Hex("#A57CFF"), Hex("#39B8F0"), Hex("#6BD14B"), Hex("#FF9F2E"),
             };
-            var letters = text.Layout("FRUIT QUEST", new Vector2(cx, 440), 350f, colors, 5f);
+            var letters = text.Layout("TILE TREK", new Vector2(cx, 440), 350f, colors, 5f);
             text.Draw(c, letters, 20f, ink, new Vector2(9, -18), new Color(0.12f, 0.03f, 0.2f, 0.55f), true);
 
             // ribbon with the subtitle
@@ -323,7 +323,7 @@ namespace MiniPlatformer.EditorTools
                 c.Shape(p => ribbon(p) - 8f, ink);
                 c.Shape(ribbon, Hex("#FF6B6B"), Hex("#D93650"), 208, 92);
                 c.Shape(p => Mathf.Max(ribbon(p) + 10f, -(p.y - 166f)), new Color(1, 1, 1, 0.25f), 3f);
-                var sub = text.Layout("A PLATFORMER ADVENTURE", new Vector2(cx, 168), 64f, new[] { Color.white }, 0f, 0.95f);
+                var sub = text.Layout("SLIDE THE ROOMS!", new Vector2(cx, 168), 64f, new[] { Color.white }, 0f, 0.95f);
                 text.Draw(c, sub, 6f, ink, new Vector2(0, -5), new Color(0.12f, 0.03f, 0.2f, 0.4f), false);
             }
 

@@ -332,6 +332,66 @@ namespace MiniPlatformer
         public static Sprite StarEmpty => Badge("b_star_e", p => Polygon(p, StarPoints(C + new Vector2(0, -2), 56f, 25f)) - 4f, Hex("#8C8AA3"), Hex("#62607A"), Hex("#39374B"));
         public static Sprite Lock => Badge("b_lock", p => Mathf.Min(RoundBox(p, new Vector2(64, 46), new Vector2(34, 28), 10),
             Mathf.Max(Mathf.Abs(Circle(p, new Vector2(64, 76), 24f)) - 7f, -(p.y - 70f))), Hex("#FFD56A"), Hex("#E7A51C"), Hex("#7D4F09"));
+        /// <summary>Gold coin with an engraved ring.</summary>
+        public static Sprite Coin => Badge("b_coin", p => Mathf.Max(Circle(p, C, 48f), -(Mathf.Abs(Circle(p, C, 31f)) - 3.5f)),
+            Hex("#FFE77A"), Hex("#F5A623"), Hex("#8A5A00"));
+        /// <summary>Red notification dot.</summary>
+        public static Sprite Dot => Badge("b_dot", p => Circle(p, C, 40f), Hex("#FF7A7A"), Hex("#E5303F"), Hex("#FFFFFF"), 9f);
+
+        // ---- meta icons (white glyphs for colored buttons; tint the Image for use on light cards)
+        public static Sprite Gift => Glyph("i_gift", p =>
+        {
+            float body = RoundBox(p, new Vector2(64, 40), new Vector2(36, 26), 6);
+            float lid = RoundBox(p, new Vector2(64, 76), new Vector2(44, 10), 5);
+            float box = Mathf.Max(Mathf.Min(body, lid), -RoundBox(p, new Vector2(64, 58), new Vector2(3.5f, 48), 1)); // ribbon slit
+            // bow: two loops with holes, knotted in the middle
+            float loopL = Mathf.Max(Circle(p, new Vector2(49, 98), 14f), -Circle(p, new Vector2(49, 98), 6f));
+            float loopR = Mathf.Max(Circle(p, new Vector2(79, 98), 14f), -Circle(p, new Vector2(79, 98), 6f));
+            return Mathf.Min(Mathf.Min(box, Mathf.Min(loopL, loopR)), Circle(p, new Vector2(64, 92), 7f));
+        });
+        public static Sprite Wheel => Glyph("i_wheel", p =>
+        {
+            float ring = Mathf.Abs(Circle(p, C, 42f)) - 7f;
+            float spokes = 1e6f;
+            for (int i = 0; i < 4; i++)
+            {
+                float a = i * Mathf.PI / 4f;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 40f;
+                spokes = Mathf.Min(spokes, Segment(p, C - dir, C + dir, 4.5f));
+            }
+            float pointer = Polygon(p, new[] { new Vector2(52, 124), new Vector2(76, 124), new Vector2(64, 100) }) - 2f;
+            return Mathf.Min(Mathf.Min(ring, spokes), Mathf.Min(Circle(p, C, 11f), pointer));
+        });
+        public static Sprite MissionList => Glyph("i_missions", p =>
+        {
+            float d = 1e6f;
+            for (int i = 0; i < 3; i++)
+            {
+                float y = 34 + i * 30;
+                d = Mathf.Min(d, Segment(p, new Vector2(56, y), new Vector2(104, y), 7f));
+                d = Mathf.Min(d, RoundBox(p, new Vector2(30, y), new Vector2(9, 9), 3));
+            }
+            return d;
+        });
+        public static Sprite Bag => Glyph("i_bag", p =>
+        {
+            float body = RoundBox(p, new Vector2(64, 50), new Vector2(40, 34), 10);
+            float handle = Mathf.Max(Mathf.Abs(Circle(p, new Vector2(64, 84), 20f)) - 6f, -(p.y - 84f));
+            return Mathf.Min(body, handle);
+        });
+        public static Sprite Magnet => Glyph("i_magnet", p =>
+        {
+            float bend = Mathf.Max(Mathf.Abs(Circle(p, new Vector2(64, 60), 30f)) - 11f, p.y - 60f);
+            float legs = Mathf.Min(Segment(p, new Vector2(34, 60), new Vector2(34, 100), 11f), Segment(p, new Vector2(94, 60), new Vector2(94, 100), 11f));
+            return Mathf.Min(bend, legs);
+        });
+        public static Sprite Glue => Glyph("i_glue", p => Mathf.Min(Circle(p, new Vector2(64, 50), 30f),
+            Polygon(p, new[] { new Vector2(64, 112), new Vector2(36, 58), new Vector2(92, 58) }) - 2f));
+        public static Sprite Shield => Glyph("i_shield", p =>
+            Polygon(p, new[] { new Vector2(28, 102), new Vector2(100, 102), new Vector2(100, 66), new Vector2(64, 20), new Vector2(28, 66) }) - 6f);
+        public static Sprite Tower => Glyph("i_tower", p => Mathf.Min(Mathf.Min(Circle(p, new Vector2(64, 30), 20f), Circle(p, new Vector2(58, 64), 18f)), Circle(p, new Vector2(68, 96), 16f)));
+
+        public static Sprite BoosterIcon(int b) => b == 0 ? Clock : b == 1 ? Star : Check;
 
         // ------------------------------------------------------------------ title-screen effects
 

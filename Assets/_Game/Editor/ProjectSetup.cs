@@ -338,8 +338,10 @@ namespace MiniPlatformer.EditorTools
                 var path = AssetDatabase.GUIDToAssetPath(g);
                 ga.clips.Add(new GameAssets.ClipEntry { key = KeyFor(path, Audio), clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path) });
             }
-            ga.levels.AddRange(AssetDatabase.FindAssets("t:TextAsset", new[] { Root + "/Resources/Levels" })
-                .Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p).Select(AssetDatabase.LoadAssetAtPath<TextAsset>));
+            // puzzles are generated from their level number; no level files any more
+            if (AssetDatabase.IsValidFolder(Root + "/Resources/Levels"))
+                ga.levels.AddRange(AssetDatabase.FindAssets("t:TextAsset", new[] { Root + "/Resources/Levels" })
+                    .Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p).Select(AssetDatabase.LoadAssetAtPath<TextAsset>));
 
             ga.spriteLit = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_SpriteLit.mat");
             ga.spriteGlow = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_SpriteGlow.mat");
@@ -347,6 +349,7 @@ namespace MiniPlatformer.EditorTools
             ga.additive = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_Additive.mat");
             ga.water = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_Water.mat");
             ga.irisWipe = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_IrisWipe.mat");
+            ga.trekPath = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_TrekPath.mat");
             ga.font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
             ga.logo = AssetDatabase.LoadAssetAtPath<Sprite>(Root + "/Art/Branding/logo.png");
             EditorUtility.SetDirty(ga);

@@ -10,20 +10,20 @@ namespace MiniPlatformer
     /// <summary>
     /// Editor-only automation hook used for playtesting from the command line.
     /// Write commands (one per line) to Temp/devcmd.txt; results are written to Temp/devstate.txt.
-    ///   level 3 | menu title|levels|heroes | hold right 1.5 | press jump | tp 10 5 | god on | unlock | state | wait 0.5
+    ///   level 3 | daily | menu title|levels|heroes | slide left|right|up|down|cell N | solve | hint | freeze
+    ///   win | die | wait 0.5 | state | popup daily|spin|missions|shop | coins 500 | newday | click LABEL
+    ///   cover | clip | sheet | trailer   store assets, see DevCapture
     /// </summary>
     public class DevConsole : MonoBehaviour
     {
         const string CmdPath = "Temp/devcmd.txt";
         const string StatePath = "Temp/devstate.txt";
-        bool m_God;
         bool m_Running;
         static string m_Measure = "";
 
         void Update()
         {
-            if (m_God && PlayerController.I != null && LevelSession.Current != null) LevelSession.Current.hearts = 3;
-            if (m_Running || !File.Exists(CmdPath)) return;
+            if (m_Running || Game.I == null || UIRoot.I == null || !File.Exists(CmdPath)) return;
             string[] lines;
             try { lines = File.ReadAllLines(CmdPath); File.Delete(CmdPath); }
             catch { return; }
@@ -38,125 +38,148 @@ namespace MiniPlatformer
                 var a = raw.Trim().Split(' ');
                 if (a.Length == 0 || a[0].Length == 0) continue;
                 float F(int i, float def = 0f) => a.Length > i && float.TryParse(a[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : def;
+                var board = Game.I.Board;
                 switch (a[0])
                 {
-                    case "level": Game.I.PlayLevel((int)F(1)); break;
+                    case "level": Game.I.PlayLevel((int)F(1, 1)); break;
+                    case "daily": Game.I.PlayDaily(); break;
                     case "menu":
                         var s = a.Length > 1 && a[1] == "levels" ? MenuScreen.LevelSelect : a.Length > 1 && a[1] == "heroes" ? MenuScreen.Characters : MenuScreen.Title;
-                        if (Game.I.InLevel) Game.I.GoToMenu(s); else UIRoot.I.ShowMenu(s, (int)F(2, SaveSystem.Data.lastWorld));
+                        if (Game.I.InLevel) Game.I.GoToMenu(s); else UIRoot.I.ShowMenu(s);
                         break;
                     case "back": UIRoot.I.MenuBack(); break;
-                    case "settings": UIRoot.I.OpenSettings(false); break;
                     case "pause": Game.I.TogglePause(); break;
-                    case "hold":
-                        Set(a[1], true);
-                        yield return new WaitForSecondsRealtime(F(2, 0.5f));
-                        Set(a[1], false);
+                    case "slide":
+                        if (board == null) break;
+                        {
+                            var lv = board.Level;
+                            int hole = System.Array.IndexOf(board.CurrentLayout(), -1);
+                            int cell = a.Length > 1 && a[1] == "cell" ? (int)F(2) :
+                                a[1] == "left" ? lv.Step(hole, RoomDef.R) : a[1] == "right" ? lv.Step(hole, RoomDef.L) :
+                                a[1] == "up" ? lv.Step(hole, RoomDef.D) : lv.Step(hole, RoomDef.U);
+                            m_Measure = "slide " + board.TrySlideFrom(cell);
+                            yield return new WaitForSeconds(0.3f);
+                        }
                         break;
-                    case "press":
-                        Set(a[1], true);
-                        yield return null;
-                        yield return null;
-                        Set(a[1], false);
+                    case "solve":
+                        // play the hint solver's moves until the route is connected (or give up)
+                        if (board == null) break;
+                        for (int i = 0; i < 40 && board != null && !board.Finished; i++)
+                        {
+                            if (board.Level.Connected(board.CurrentLayout())) { m_Measure = "solved in " + board.Slides; break; }
+                            int c = board.Level.HintMove(board.CurrentLayout());
+                            if (c < 0) { m_Measure = "no hint"; break; }
+                            if (!board.TrySlideFrom(c)) { yield return new WaitForSeconds(0.25f); continue; }
+                            yield return new WaitForSeconds(0.3f);
+                        }
                         break;
-                    case "on": Set(a[1], true); break;
-                    case "off": Set(a[1], false); break;
+                    case "autotest":
+                    {
+                        // autotest <from> <to>: freeze the hero, solve with the hint solver, release, and check the hero
+                        // walks the route to the trophy. Reports levels where the walk fails.
+                        var sb = new StringBuilder();
+                        int ok = 0, total = 0;
+                        for (int n = (int)F(1, 1); n <= (int)F(2, 10); n++)
+                        {
+                            Game.I.PlayLevel(n);
+                            yield return new WaitForSecondsRealtime(1.4f);
+                            var bd = Game.I.Board;
+                            if (bd == null || bd.Level.number != n) { sb.Append($"L{n}:noload "); continue; }
+                            bd.Freeze(120f);
+                            for (int i = 0; i < 60 && !bd.Level.Connected(bd.CurrentLayout()); i++)
+                            {
+                                int c = bd.Level.HintMove(bd.CurrentLayout());
+                                if (c < 0) break;
+                                if (!bd.TrySlideFrom(c)) { yield return new WaitForSeconds(0.2f); continue; }
+                                yield return new WaitForSeconds(0.25f);
+                            }
+                            bool connected = bd.Level.Connected(bd.CurrentLayout());
+                            while (!bd.Started) yield return null;
+                            bd.Freeze(0.01f);
+                            float t0 = Time.time;
+                            while (!bd.Finished && Time.time - t0 < 45f) yield return null;
+                            total++;
+                            bool won = bd.Hero != null && bd.Hero.Won;
+                            if (won) ok++;
+                            else sb.Append($"L{n}:{(connected ? "" : "unsolved,")}{(bd.Hero != null && bd.Hero.Dead ? "died" : "stuck")}@({bd.Hero?.transform.position.x:0.0},{bd.Hero?.FeetY:0.0}) ");
+                            yield return new WaitForSecondsRealtime(1.6f);
+                        }
+                        m_Measure = $"autotest {ok}/{total} won. " + sb;
+                        break;
+                    }
+                    case "hint": if (board != null) m_Measure = "hint " + board.ShowHint(); break;
+                    case "path":
+                        if (board != null)
+                        {
+                            var lr = board.GetComponentInChildren<LineRenderer>();
+                            var pts = new Vector3[lr.positionCount];
+                            lr.GetPositions(pts);
+                            var psb = new StringBuilder("path:");
+                            foreach (var pt in pts) psb.Append($" ({pt.x:0.0},{pt.y:0.0})");
+                            m_Measure = psb.ToString() + " complete " + board.PathComplete + " progress " + board.Progress.ToString("0.00");
+                        }
+                        break;
+                    case "freeze": board?.Freeze(F(1, 6f)); break;
+                    case "win":
+                        if (board != null && board.Hero != null)
+                        {
+                            var goal = board.GetComponentInChildren<TrekGoal>();
+                            if (goal != null) { board.Hero.Body.position = (Vector2)goal.transform.position + Vector2.up * 0.8f; board.Hero.Moving = true; }
+                        }
+                        break;
+                    case "die": board?.Hero?.Die(false); break;
                     case "shot":
                         ScreenCapture.CaptureScreenshot("Temp/" + (a.Length > 1 ? a[1] : "shot") + ".png");
                         yield return null;
                         break;
                     case "wait": yield return new WaitForSecondsRealtime(F(1, 0.5f)); break;
-                    case "jumpdist":
-                    {
-                        var pl = PlayerController.I;
-                        float x0 = pl.transform.position.x, y0 = pl.FeetY, maxY = y0, t0 = Time.time;
-                        Set("jump", true);
-                        while (pl.IsGrounded && Time.time - t0 < 0.5f) yield return null;
-                        if (a.Length > 1 && a[1] == "double") { yield return new WaitForSeconds(0.42f); Set("jump", false); yield return null; yield return null; Set("jump", true); }
-                        while (!pl.IsGrounded && Time.time - t0 < 4f) { maxY = Mathf.Max(maxY, pl.FeetY); yield return null; }
-                        Set("jump", false);
-                        m_Measure = $"jumpdist: dx {pl.transform.position.x - x0:0.00} apex +{maxY - y0:0.00} air {Time.time - t0:0.00}s";
-                        break;
-                    }
-                    case "measure":
-                    {
-                        var pl = PlayerController.I;
-                        float y0 = pl.FeetY, x0 = pl.transform.position.x, maxY = y0, t0 = Time.time;
-                        float dur = F(1, 1.5f);
-                        while (Time.time - t0 < dur)
+                    case "popup":
+                        switch (a.Length > 1 ? a[1] : "")
                         {
-                            maxY = Mathf.Max(maxY, pl.FeetY);
-                            yield return null;
-                        }
-                        m_Measure = $"measure: apex +{maxY - y0:0.00}  dx {pl.transform.position.x - x0:0.00}  endY {pl.FeetY - y0:0.00}";
-                        break;
-                    }
-                    case "tp":
-                        var p = PlayerController.I;
-                        if (p != null) { p.Body.position = new Vector2(F(1), F(2) + 0.75f); p.Body.linearVelocity = Vector2.zero; }
-                        break;
-                    case "tpobj":
-                    {
-                        // tpobj <name> [index]: stand on top of a level object
-                        var pl = PlayerController.I;
-                        int idx = (int)F(2, 0f), n = 0;
-                        foreach (var t in FindObjectsByType<Transform>(FindObjectsSortMode.None))
-                        {
-                            if (t.name != a[1] || t.parent == null || t.parent.name != "Entities") continue;
-                            if (n++ != idx) continue;
-                            var col = t.GetComponent<Collider2D>();
-                            float top = col != null ? col.bounds.max.y : t.position.y + 0.5f;
-                            pl.Body.position = new Vector2(t.position.x, top + PlayerController.ColliderHeight * 0.5f + 0.02f);
-                            pl.Body.linearVelocity = Vector2.zero;
-                            break;
+                            case "daily": UIRoot.I.ShowDaily(); break;
+                            case "spin": UIRoot.I.ShowSpin(); break;
+                            case "missions": UIRoot.I.ShowMissions(); break;
+                            case "shop": UIRoot.I.ShowShop(); break;
                         }
                         break;
-                    }
-                    case "god": m_God = a.Length < 2 || a[1] != "off"; break;
-                    case "unlock":
-                        SaveSystem.Data.unlocked = LevelCatalog.LevelCount;
+                    case "coins": Economy.AddCoins((int)F(1, 500)); break;
+                    case "newday":
+                        SaveSystem.Data.dailyDay = Economy.Today - 1; SaveSystem.Data.spinDay = -1; SaveSystem.Data.missionDay = -1;
                         SaveSystem.Save();
                         break;
-                    case "stars":
-                        for (int i = 0; i < SaveSystem.Data.stars.Length; i++) SaveSystem.Data.stars[i] = 7;
-                        SaveSystem.Save();
-                        break;
+                    case "unlock": SaveSystem.Data.level = Mathf.Max(SaveSystem.Data.level, (int)F(1, 30)); SaveSystem.Save(); break;
                     case "reset": SaveSystem.ResetProgress(); break;
-                    case "zoom": CameraRig.I.SetZoom(F(1, 1f)); CameraRig.I.ZoomPunch(F(1, 1f)); break;
-                    case "cam":
-                        CameraRig.I.SetTarget(null, false);
-                        CameraRig.I.clampToBounds = false;
-                        CameraRig.I.SnapTo(new Vector2(F(1), F(2)));
-                        break;
-                    case "follow":
-                        if (PlayerController.I != null) { CameraRig.I.clampToBounds = true; CameraRig.I.SetTarget(PlayerController.I.transform, true); }
-                        break;
                     case "timescale": Time.timeScale = F(1, 1f); break;
                     case "state": WriteState(); break;
-                    case "win": LevelSession.Current?.Complete(); break;
-                    case "cover": yield return DevCapture.Covers((int)F(1)); break;
-                    case "clip": yield return DevCapture.Clip(a[1], (int)F(2), F(3, 5f), (int)F(4, 1920), (int)F(5, 1080), F(6, 15f)); break;
-                    case "scene": yield return DevCapture.Scene(a[1], a[2], (int)F(3, 1920), (int)F(4, 1080), F(5, 11f)); break;
-                    case "sheet": m_Measure = DevCapture.ContactSheet(a[1], (int)F(2, 15)); break;
-                    case "trailer":
+                    case "gen":
                     {
-                        // trailer <out.mp4> <w> <h> <cover.png> <clip:start:count>...
-                        string res;
-                        try { res = DevCapture.Trailer(a[1], (int)F(2), (int)F(3), a[4], a[5..]); }
-                        catch (System.Exception e) { res = "trailer failed: " + e.Message; }
-                        m_Measure = res;
+                        // gen <from> <to>: generate levels and report sizes / par / route length (generator sanity)
+                        var sb = new StringBuilder();
+                        for (int n = (int)F(1, 1); n <= (int)F(2, 20); n++)
+                        {
+                            var lv = Game.BuildLevel(n, false);
+                            sb.Append($"L{n}:{lv.w}x{lv.h} path {lv.pathLength} par {lv.par} t {lv.targetTime:0} hint {(lv.HintMove(lv.layout) >= 0 ? "y" : "N")} | ");
+                        }
+                        m_Measure = sb.ToString();
                         break;
                     }
-                    case "die":
-                    {
-                        var ls = LevelSession.Current;
-                        if (ls != null && ls.player != null) { ls.hearts = 1; ls.LoseHeart(); ls.player.Die(); }
+                    case "cover":
+                        yield return DevCapture.Covers((int)F(1, 9), (int)F(2, 9));
+                        m_Measure = DevCapture.LastResult;
                         break;
-                    }
-                    case "sessiontime": if (LevelSession.Current != null) LevelSession.Current.time = F(1); break;
+                    case "clip": // clip <name> <level> <portrait 0|1> <w> <h> <camera> [maxSec] [slideGap] [hold 0|1]
+                        yield return DevCapture.Clip(a[1], (int)F(2, 1), F(3) > 0f, (int)F(4, 1920), (int)F(5, 1080), a.Length > 6 ? a[6] : "fit", F(7, 14f), F(8, 0.5f), F(9) > 0f);
+                        m_Measure = DevCapture.LastResult;
+                        break;
+                    case "bitrate":
+                        DevCapture.Bitrate = a.Length > 1 && a[1] == "low" ? UnityEditor.VideoBitrateMode.Low : a.Length > 1 && a[1] == "medium" ? UnityEditor.VideoBitrateMode.Medium : UnityEditor.VideoBitrateMode.High;
+                        break;
+                    case "sheet": m_Measure = DevCapture.ContactSheet(a[1], (int)F(2, 6)); break;
+                    case "trailer": // trailer <out.mp4> <w> <h> <cover.png> <clip:start:len>...
+                        m_Measure = DevCapture.Trailer(a[1], (int)F(2), (int)F(3), a[4], a[5..]);
+                        break;
                     case "click":
                     {
-                        // click <label or object name>: presses the first active, interactable button that matches
                         string label = string.Join(" ", a, 1, a.Length - 1);
                         foreach (var b in FindObjectsByType<UnityEngine.UI.Button>(FindObjectsSortMode.None))
                         {
@@ -176,32 +199,21 @@ namespace MiniPlatformer
             m_Running = false;
         }
 
-        static void Set(string what, bool held)
-        {
-            switch (what)
-            {
-                case "left": GameInput.TouchLeft = held; break;
-                case "right": GameInput.TouchRight = held; break;
-                case "jump": GameInput.TouchJump = held; break;
-                case "dash": GameInput.TouchDash = held; break;
-                case "down": GameInput.TouchDown = held; break;
-            }
-        }
-
         static void WriteState()
         {
             var sb = new StringBuilder();
-            var p = PlayerController.I;
-            var s = LevelSession.Current;
-            sb.AppendLine($"time {Time.time:0.00} inLevel {Game.I.InLevel} paused {Game.I.IsPaused} timeScale {Time.timeScale} sdk {Platform.Ready} adPlaying {Platform.AdPlaying} level {Game.I.CurrentLevel} unlocked {SaveSystem.Data.unlocked}");
+            sb.AppendLine($"time {Time.time:0.00} inLevel {Game.I.InLevel} paused {Game.I.IsPaused} timeScale {Time.timeScale} sdk {Platform.Ready} adPlaying {Platform.AdPlaying} level {Game.I.CurrentLevel} next {SaveSystem.Data.level}");
             var popups = GameObject.Find("Popups");
             if (popups != null) { sb.Append("popups:"); foreach (Transform c in popups.transform) sb.Append(" " + c.name); sb.AppendLine(); }
-            if (p != null)
-                sb.AppendLine($"player feet ({p.transform.position.x:0.00},{p.FeetY:0.00}) vel {p.Velocity} grounded {p.IsGrounded} wall {p.IsWallSliding} dead {p.IsDead} ctrl {p.Controllable}");
-            if (s != null)
-                sb.AppendLine($"hearts {s.hearts} fruits {s.fruitsCollected}/{s.fruitsTotal} time {s.time:0.0} finished {s.finished} checkpoint {s.checkpoint}");
-            var icon = GameObject.Find("FruitIcon");
-            if (icon != null) sb.AppendLine($"fruitIcon scale {icon.transform.localScale.x:0.000}");
+            var b = Game.I.Board;
+            if (b != null)
+            {
+                var lv = b.Level;
+                sb.AppendLine($"board {lv.w}x{lv.h} slides {b.Slides}/{lv.par} time {b.Elapsed:0.0}/{lv.targetTime:0} coins {b.CoinsTaken}/{b.CoinsTotal} started {b.Started} finished {b.Finished} connected {lv.Connected(b.CurrentLayout())}");
+                sb.AppendLine("layout " + string.Join(",", b.CurrentLayout()));
+                if (b.Hero != null) sb.AppendLine($"hero ({b.Hero.transform.position.x:0.00},{b.Hero.FeetY:0.00}) facing {b.Hero.Facing} moving {b.Hero.Moving} dead {b.Hero.Dead} won {b.Hero.Won}");
+            }
+            sb.AppendLine($"coins {Economy.Coins} daily {Economy.DailyReady} freeSpin {Economy.FreeSpinReady} rewarded {Platform.RewardedAvailable} stars {SaveSystem.TotalStars()}");
             sb.AppendLine(m_Measure);
             File.WriteAllText(StatePath, sb.ToString());
         }

@@ -65,8 +65,8 @@ namespace MiniPlatformer
         }
 
         // audio filters don't exist on WebGL, so the pause "muffle" is also a volume dip there
-        float MusicVolume => SaveSystem.Data.music * 0.55f * (m_CutoffTarget < 10000f ? 0.5f : 1f);
-        float SfxVolume => SaveSystem.Data.sfx;
+        float MusicVolume => Platform.HostMuted ? 0f : SaveSystem.Data.music * 0.55f * (m_CutoffTarget < 10000f ? 0.5f : 1f);
+        float SfxVolume => Platform.HostMuted ? 0f : SaveSystem.Data.sfx;
 
         void Update()
         {
