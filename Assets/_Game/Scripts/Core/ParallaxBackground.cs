@@ -28,6 +28,7 @@ namespace MiniPlatformer
         Camera m_Cam;
         float m_RefY;
         float m_Time;
+        float m_SetHeight; // tallest layer of the set (world units), the height the art was drawn to fill
 
         /// <summary>Extra horizontal offset (the menu drifts the background with this).</summary>
         public float virtualX;
@@ -86,6 +87,7 @@ namespace MiniPlatformer
                 l.mpb.SetColor(FogId, d.fog);
                 l.mpb.SetFloat(HeightFogId, d.heightFog);
                 m_Layers.Add(l);
+                if (d.factor > 0.001f) m_SetHeight = Mathf.Max(m_SetHeight, l.heightUnits + Mathf.Max(0f, d.bottom));
             }
             LateUpdate();
         }
@@ -98,13 +100,16 @@ namespace MiniPlatformer
             float halfH = m_Cam.orthographicSize;
             float halfW = halfH * m_Cam.aspect;
             float camX = cp.x + virtualX;
+            // the art is drawn for a 16:9 view; when the view is taller (tall boards, phones) the whole set scales up
+            // together so it still fills the screen instead of ending in a hard edge half way up
+            float fill = m_SetHeight > 0f ? Mathf.Max(1f, (halfH * 2f + 2.5f) / m_SetHeight) : 1f;
             foreach (var l in m_Layers)
             {
                 float width = halfW * 2f + 2f;
                 // slight vertical parallax so tall climbs feel deep
                 float vy = Mathf.Clamp((cp.y - m_RefY) * l.def.factor * 0.35f, -4f, 4f);
-                float bottom = cp.y - halfH + l.def.bottom - vy;
-                float h = l.heightUnits;
+                float bottom = cp.y - halfH + l.def.bottom * fill - vy;
+                float h = l.heightUnits * fill;
                 // the far sky layer always covers the whole view
                 if (l.def.factor <= 0.001f && h < halfH * 2f + 2f) { h = halfH * 2f + 3f; bottom = cp.y - halfH - 1.5f; }
                 l.tr.position = new Vector3(cp.x, bottom, 10f);

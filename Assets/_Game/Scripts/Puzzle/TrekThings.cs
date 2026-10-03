@@ -17,7 +17,7 @@ namespace MiniPlatformer
             go.transform.localPosition = localFeet;
             var g = go.AddComponent<TrekGoal>();
             g.m_Anim = EntityKit.Sprite(go, GameAssets.I.Frames("PA1/Items/Checkpoints/End/End (Idle)"), Sort.Items - 2, new Vector2(0f, 1.5f), false);
-            g.m_Anim.transform.localScale = Vector3.one * 0.75f;
+            g.m_Anim.transform.localScale = Vector3.one * 0.95f;
             EntityKit.Box(go, new Vector2(1.3f, 1.8f), new Vector2(0f, 0.9f), true);
             return g;
         }

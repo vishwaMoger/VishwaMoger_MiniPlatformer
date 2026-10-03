@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
@@ -101,6 +102,10 @@ namespace MiniPlatformer
         float m_FrameAlpha = 1f, m_ShadeAlpha;
         /// <summary>0 normal, 1 part of the finished route (frame melts away), 2 off the route (dimmed).</summary>
         int m_Focus;
+        // trophy room markers: a pulsing gold frame, a bobbing GOAL label and arrows at the doorway to enter by
+        SpriteRenderer m_GoalGlow;
+        Transform m_GoalLabel;
+        readonly List<SpriteRenderer> m_GoalDoors = new List<SpriteRenderer>();
 
         public Vector2 Origin => transform.position;
         public Rect WorldRect => new Rect(transform.position.x, transform.position.y, Size, Size);
@@ -318,15 +323,12 @@ namespace MiniPlatformer
             switch (def.kind)
             {
                 case RoomKind.Start:
-                {
-                    var flag = EntityKit.Root("StartFlag", Contents, Vector2.zero);
-                    flag.transform.localPosition = new Vector2(def.Has(RoomDef.R) || def.Has(RoomDef.D) ? 1.3f : 5.7f, 3f);
-                    var fa = EntityKit.Sprite(flag, GameAssets.I.Frames("PA1/Items/Checkpoints/Start/Start (Idle)"), Sort.Decor);
-                    fa.transform.localScale = Vector3.one * 0.75f;
+                    // a plain label: checkered flags looked like a second finish line next to the trophy
+                    WorldLabel("START", new Vector2(3.5f, 4.7f), 5.5f, new Color(0.62f, 1f, 0.62f), new Color32(16, 52, 24, 255));
                     break;
-                }
                 case RoomKind.Exit:
                     TrekGoal.Create(Contents, new Vector2(3.5f, 1f));
+                    BuildGoalMarkers();
                     break;
                 case RoomKind.Spikes:
                     for (int x = 1; x <= 5; x++) TrekHazards.Spike(Contents, new Vector2(x + 0.5f, 1.5f));
@@ -349,6 +351,53 @@ namespace MiniPlatformer
             if (def.Has(RoomDef.R)) spots.Add(new Vector2(5.5f, 1.8f));
             if (spots.Count == 0) spots.Add(def.Has(RoomDef.U) && def.Has(RoomDef.D) ? new Vector2(3.5f, 3.6f) : new Vector2(3.5f, 1.8f));
             for (int i = 0; i < spots.Count && i < def.coins; i++) TrekCoin.Create(Contents, spots[i], glow);
+        }
+
+        /// <summary>Makes the trophy room impossible to miss and shows which doorway leads in.</summary>
+        void BuildGoalMarkers()
+        {
+            var center = new Vector2(Size * 0.5f, Size * 0.5f);
+            m_GoalGlow = TrekArt.SlicedRenderer(transform, TrekArt.Glow, center, new Vector2(Size + 0.3f, Size + 0.3f), Sort.FX - 1, new Color(1f, 0.82f, 0.25f, 0.6f), "GoalGlow");
+
+            m_GoalLabel = WorldLabel("GOAL", new Vector2(3.5f, 4.7f), 7f, new Color(1f, 0.86f, 0.3f), new Color32(70, 34, 10, 255)).transform;
+
+            // the way in glows: the exit room only opens towards the route, so every opening is an entrance
+            void Door(int side, Vector2 c, Vector2 size)
+            {
+                if (!def.Has(side)) return;
+                m_GoalDoors.Add(TrekArt.SlicedRenderer(transform, TrekArt.Glow, c, size, Sort.WorldUI - 1, new Color(1f, 0.85f, 0.3f, 0.8f), "GoalDoor"));
+            }
+            Door(RoomDef.L, new Vector2(0.45f, 2f), new Vector2(1.1f, 2.3f));
+            Door(RoomDef.R, new Vector2(6.55f, 2f), new Vector2(1.1f, 2.3f));
+            Door(RoomDef.U, new Vector2(3.5f, 6.55f), new Vector2(3.3f, 1.1f));
+        }
+
+        TextMeshPro WorldLabel(string text, Vector2 at, float size, Color color, Color32 outline)
+        {
+            var go = new GameObject(text + "Label");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = at;
+            var tmp = go.AddComponent<TextMeshPro>();
+            tmp.font = GameAssets.I.font;
+            tmp.text = text;
+            tmp.fontSize = size;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = color;
+            tmp.outlineColor = outline;
+            tmp.outlineWidth = 0.3f;
+            tmp.rectTransform.sizeDelta = new Vector2(6f, 2f);
+            tmp.GetComponent<MeshRenderer>().sortingOrder = Sort.WorldUI;
+            return tmp;
+        }
+
+        void AnimateGoal()
+        {
+            float t = Time.time;
+            float k = 0.5f + 0.5f * Mathf.Sin(t * 3f);
+            if (m_GoalGlow != null) m_GoalGlow.color = new Color(1f, 0.82f, 0.25f, m_Focus == 2 ? 0f : 0.35f + 0.4f * k);
+            if (m_GoalLabel != null) m_GoalLabel.localPosition = new Vector2(3.5f, 4.7f + 0.15f * Mathf.Sin(t * 2.4f));
+            bool doors = m_Focus != 1; // once the route is built the hall melts: the doorway hint is done
+            foreach (var d in m_GoalDoors) d.color = new Color(1f, 0.85f, 0.3f, doors ? 0.45f + 0.5f * k : 0f);
         }
 
         // ------------------------------------------------------------------ slide highlight
@@ -394,6 +443,7 @@ namespace MiniPlatformer
 
         void Update()
         {
+            if (m_GoalLabel != null) AnimateGoal();
             bool movable = m_Arrow != null && m_Arrow.gameObject.activeSelf;
             if (!movable && !m_Hint) return;
             m_Pulse += Time.unscaledDeltaTime;

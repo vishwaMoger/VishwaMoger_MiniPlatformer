@@ -163,6 +163,112 @@ namespace MiniPlatformer
                         m_Measure = sb.ToString();
                         break;
                     }
+                    case "curate":
+                    {
+                        // curate <portrait 0|1> [candidates]: for each campaign level, generate many candidates and keep
+                        // the one closest to the difficulty curve with a fair start; writes the {seed, par} table.
+                        bool portrait = F(1) > 0f;
+                        int candidates = (int)F(2, 80);
+                        var table = new StringBuilder();
+                        var report = new StringBuilder();
+                        for (int n = 1; n <= TrekLevel.CampaignLength; n++)
+                        {
+                            int target = TrekLevel.TargetSlides[n - 1];
+                            TrekLevel best = null; int bestOpt = -1; float bestScore = float.MaxValue;
+                            for (int k = 0; k < candidates; k++)
+                            {
+                                var lv = TrekLevel.Generate(n, n * 1009 + 17 + k * 104729, false, portrait);
+                                if (lv.number != n) continue; // generator fell back to a tiny board
+                                int opt = lv.SolutionLength(lv.layout, 400000);
+                                if (opt < 1) continue;
+                                var walk = lv.WalkFromStart(lv.layout);
+                                float dist = 0f;
+                                for (int i = 1; i < walk.points.Count; i++) dist += Vector2.Distance(walk.points[i - 1], walk.points[i]);
+                                float score = Mathf.Abs(opt - target) * 10f;
+                                if (walk.died) score += (n <= 8 ? 25f : 0f) + Mathf.Max(0f, 16f - dist) * 2f; // time to react before a fall
+                                int deadly = 0; foreach (var r in lv.rooms) if (r.Deadly) deadly++;
+                                if (n >= 7 && deadly == 0) score += 4f; // later levels should have traps to avoid
+                                if (score < bestScore) { bestScore = score; best = lv; bestOpt = opt; }
+                                if (k % 8 == 7) yield return null;
+                            }
+                            if (best == null) { report.Append($"L{n}:NONE "); table.Append("            { 0, 0 }," + System.Environment.NewLine); continue; }
+                            int par = bestOpt + (n <= 6 ? 1 : 2);
+                            table.Append($"            {{ {best.seed}, {par} }}, // {n}: {best.w}x{best.h}, {bestOpt} slides, route {best.pathLength}" + System.Environment.NewLine);
+                            report.Append($"L{n}:{bestOpt}/{target}{(bestScore >= 10f ? "!" : "")} ");
+                        }
+                        File.WriteAllText($"Temp/campaign_{(portrait ? "portrait" : "landscape")}.txt", table.ToString());
+                        m_Measure = $"curate {(portrait ? "portrait" : "landscape")}: " + report;
+                        break;
+                    }
+                    case "hintstress":
+                    {
+                        // hintstress <from> <to> <trials> [portrait 0|1]: mid-game states (random slides, hero parked where
+                        // their walk ends), then the board's hint logic (search, else undo the scramble, else rescue the
+                        // hero to the start) is followed until the hero's walk reaches the trophy. Reports failures.
+                        var sb = new StringBuilder();
+                        int trials = (int)F(3, 30), ok = 0, fail = 0, total = 0, rescues = 0, undos = 0, searched = 0, steps = 0;
+                        float worstMs = 0f;
+                        var rng = new System.Random(1234);
+                        var sw = new System.Diagnostics.Stopwatch();
+                        for (int n = (int)F(1, 1); n <= (int)F(2, 20); n++)
+                        {
+                            var lv = TrekLevel.Campaign(n, F(4) > 0f);
+                            for (int t = 0; t < trials; t++)
+                            {
+                                var lay = (int[])lv.layout.Clone();
+                                var path = new System.Collections.Generic.List<int>(lv.scramblePath);
+                                void Slide(int c)
+                                {
+                                    int hole = System.Array.IndexOf(lay, -1);
+                                    lay[hole] = lay[c]; lay[c] = -1;
+                                    if (path.Count >= 2 && path[path.Count - 2] == c) path.RemoveAt(path.Count - 1); else path.Add(c);
+                                }
+                                int k = rng.Next(14);
+                                for (int i = 0; i < k; i++) { var nb = lv.Neighbours(System.Array.IndexOf(lay, -1)); Slide(nb[rng.Next(nb.Count)]); }
+                                var walk = lv.WalkFromStart(lay);
+                                if (walk.died || walk.reached) continue;
+                                int heroRoom = lay[walk.cells[walk.cells.Count - 1]];
+                                float hx = 3.5f, dir = rng.Next(2) == 0 ? 1f : -1f;
+                                total++;
+                                bool solved = false;
+                                for (int step = 0; step < 150 && !solved; step++)
+                                {
+                                    int hc = System.Array.IndexOf(lay, heroRoom);
+                                    if (lv.Walk(lay, hc, hx, dir, false).reached) { solved = true; break; }
+                                    sw.Restart();
+                                    int mv = lv.HintMove(lay, heroRoom, hx, dir, 60000, 150);
+                                    sw.Stop();
+                                    worstMs = Mathf.Max(worstMs, (float)sw.Elapsed.TotalMilliseconds);
+                                    if (mv < 0 && heroRoom >= lv.pathLength)
+                                    {
+                                        sw.Restart();
+                                        mv = lv.HintMove(lay, heroRoom, hx, dir, 250000, 400);
+                                        sw.Stop();
+                                        worstMs = Mathf.Max(worstMs, (float)sw.Elapsed.TotalMilliseconds);
+                                    }
+                                    if (mv >= 0) searched++;
+                                    else
+                                    {
+                                        int undo = path.Count >= 2 ? path[path.Count - 2] : -1;
+                                        if (heroRoom >= lv.pathLength || undo < 0)
+                                        {
+                                            rescues++;
+                                            heroRoom = lv.startRoom; lv.StartSpawn(out hx, out dir);
+                                            continue;
+                                        }
+                                        mv = undo; undos++;
+                                    }
+                                    Slide(mv);
+                                    steps++;
+                                }
+                                if (solved) ok++;
+                                else { fail++; if (fail <= 10) sb.Append($"L{n}:unsolved(room {heroRoom}) "); }
+                            }
+                            yield return null;
+                        }
+                        m_Measure = $"hintstress {ok}/{total} solved, {fail} failed; moves: {searched} searched, {undos} undo; {rescues} rescues; {steps} slides; worst {worstMs:0}ms. " + sb;
+                        break;
+                    }
                     case "cover":
                         yield return DevCapture.Covers((int)F(1, 9), (int)F(2, 9));
                         m_Measure = DevCapture.LastResult;

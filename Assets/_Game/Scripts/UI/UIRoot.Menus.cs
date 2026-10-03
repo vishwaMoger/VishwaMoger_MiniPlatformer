@@ -96,9 +96,9 @@ namespace MiniPlatformer
 
             var col = UIKit.Rect(root, "Buttons", new Vector2(0.5f, 0.5f), new Vector2(0f, Portrait ? 60f : -210f), new Vector2(520f, 520f));
             if (Portrait) col.localScale = Vector3.one * 1.25f; // bigger thumb-friendly buttons on phones
-            int next = SaveSystem.Data.level;
+            int next = Game.NextToPlay();
             var play = UIKit.Button(col, "PLAY", "green", new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(460f, 120f),
-                () => Game.I.PlayLevel(SaveSystem.Data.level), UIArt.Play, 48f, "confirm");
+                () => Game.I.PlayLevel(Game.NextToPlay()), UIArt.Play, 48f, "confirm");
             AddShine(play, 460f);
             play.GetComponent<UIButtonFX>().pulse = 1f;
             var lvBadge = UIKit.Panel(play.transform, "yellow", new Vector2(1f, 1f), new Vector2(-12f, 6f), new Vector2(170f, 46f), "Badge");
@@ -185,7 +185,8 @@ namespace MiniPlatformer
         {
             var root = UIKit.Stretch(m_MenuLayer, "LevelSelect");
             int reached = SaveSystem.Data.level;
-            int pages = Mathf.Max(1, (reached - 1) / LevelsPerPage + 2); // one page past the frontier, to tease
+            int allPages = (SaveSystem.MaxLevels + LevelsPerPage - 1) / LevelsPerPage;
+            int pages = Mathf.Clamp((reached - 1) / LevelsPerPage + 2, 1, allPages); // one page past the frontier, to tease
             m_BrowseWorld = Mathf.Clamp(m_BrowseWorld, 0, pages - 1);
             Game.I.SetMenuWorld(Game.WorldForLevel(m_BrowseWorld * LevelsPerPage + 1));
 

@@ -38,6 +38,8 @@ namespace MiniPlatformer
         public int par;             // slides for the third star
         public float targetTime;    // seconds for the "fast" star
         public bool daily;
+        /// <summary>The empty slot's path while scrambling (solved hole first): replaying it backwards solves the board.</summary>
+        public List<int> scramblePath = new List<int>();
 
         public int Cell(int x, int y) => y * w + x;
         public int CellX(int c) => c % w;
@@ -55,6 +57,95 @@ namespace MiniPlatformer
                 if (lv != null) return lv;
             }
             return TryGenerate(1, seed, daily, portrait); // tiny fallback, always works
+        }
+
+        // ------------------------------------------------------------------ the campaign
+
+        public const int CampaignLength = 30;
+
+        /// <summary>Difficulty curve: the fewest slides each campaign level needs (5 worlds x 6 levels; each new board
+        /// size starts a little easier again).</summary>
+        public static readonly int[] TargetSlides = { 1, 2, 2, 3, 3, 4,  4, 5, 4, 5, 5, 6,  6, 6, 7, 7, 7, 8,  7, 8, 8, 9, 9, 10,  8, 9, 10, 10, 11, 12 };
+
+        // Hand-picked levels {seed, par}, chosen by the dev console `curate` from many generated candidates: proven
+        // solvable from the start, on the difficulty curve, with a fair start. NOTE: changing the generator changes
+        // what a seed produces, so re-run `curate 0` and `curate 1` after touching TryGenerate.
+        static readonly int[,] s_Landscape =
+        {
+            { 1026, 2 }, // 1: 3x2, 1 slides, route 2
+            { 106764, 3 }, // 2: 3x2, 2 slides, route 3
+            { 631418, 3 }, // 3: 3x3, 2 slides, route 3
+            { 108782, 4 }, // 4: 3x3, 3 slides, route 4
+            { 1052352, 4 }, // 5: 3x3, 3 slides, route 4
+            { 634445, 5 }, // 6: 3x3, 4 slides, route 5
+            { 425996, 6 }, // 7: 3x3, 4 slides, route 5
+            { 5035081, 7 }, // 8: 3x3, 5 slides, route 6
+            { 1161117, 6 }, // 9: 4x3, 4 slides, route 6
+            { 1162126, 7 }, // 10: 4x3, 5 slides, route 6
+            { 115845, 7 }, // 11: 4x3, 5 slides, route 5
+            { 12125, 8 }, // 12: 4x3, 6 slides, route 6
+            { 3155004, 8 }, // 13: 4x3, 6 slides, route 4
+            { 223601, 8 }, // 14: 4x3, 6 slides, route 4
+            { 1586087, 9 }, // 15: 4x3, 7 slides, route 6
+            { 3576947, 9 }, // 16: 4x3, 7 slides, route 5
+            { 331357, 9 }, // 17: 4x3, 7 slides, route 9
+            { 2112759, 10 }, // 18: 4x3, 8 slides, route 6
+            { 333375, 9 }, // 19: 4x3, 7 slides, route 10
+            { 1905319, 10 }, // 20: 4x3, 8 slides, route 7
+            { 3058347, 10 }, // 21: 4x3, 8 slides, route 8
+            { 2326253, 11 }, // 22: 4x3, 9 slides, route 6
+            { 5992777, 11 }, // 23: 4x3, 9 slides, route 6
+            { 2118813, 12 }, // 24: 4x3, 10 slides, route 7
+            { 234700, 10 }, // 25: 4x4, 8 slides, route 12
+            { 2225560, 11 }, // 26: 4x4, 9 slides, route 8
+            { 341447, 12 }, // 27: 4x4, 10 slides, route 10
+            { 132998, 12 }, // 28: 4x4, 10 slides, route 6
+            { 971839, 13 }, // 29: 4x4, 11 slides, route 7
+            { 239745, 14 }, // 30: 4x4, 12 slides, route 9
+        };
+        static readonly int[,] s_Portrait =
+        {
+            { 105755, 2 }, // 1: 2x3, 1 slides, route 2
+            { 525680, 3 }, // 2: 2x3, 2 slides, route 3
+            { 631418, 3 }, // 3: 3x3, 2 slides, route 3
+            { 108782, 4 }, // 4: 3x3, 3 slides, route 4
+            { 1052352, 4 }, // 5: 3x3, 3 slides, route 4
+            { 634445, 5 }, // 6: 3x3, 4 slides, route 5
+            { 425996, 6 }, // 7: 3x3, 4 slides, route 5
+            { 5035081, 7 }, // 8: 3x3, 5 slides, route 6
+            { 1056388, 6 }, // 9: 3x4, 4 slides, route 6
+            { 2314145, 7 }, // 10: 3x4, 5 slides, route 7
+            { 3257715, 7 }, // 11: 3x4, 5 slides, route 7
+            { 1583060, 8 }, // 12: 3x4, 6 slides, route 7
+            { 641508, 8 }, // 13: 3x4, 6 slides, route 8
+            { 1689807, 8 }, // 14: 3x4, 6 slides, route 8
+            { 5042144, 9 }, // 15: 3x4, 7 slides, route 9
+            { 225619, 9 }, // 16: 3x4, 7 slides, route 8
+            { 7243471, 9 }, // 17: 3x4, 7 slides, route 9
+            { 541824, 10 }, // 18: 3x4, 8 slides, route 8
+            { 2637413, 9 }, // 19: 3x4, 7 slides, route 6
+            { 124926, 10 }, // 20: 3x4, 8 slides, route 6
+            { 1068496, 10 }, // 21: 3x4, 8 slides, route 6
+            { 2954627, 11 }, // 22: 3x4, 9 slides, route 7
+            { 232682, 11 }, // 23: 3x4, 9 slides, route 8
+            { 966794, 12 }, // 24: 3x4, 10 slides, route 7
+            { 234700, 10 }, // 25: 4x4, 8 slides, route 12
+            { 2225560, 11 }, // 26: 4x4, 9 slides, route 8
+            { 341447, 12 }, // 27: 4x4, 10 slides, route 10
+            { 132998, 12 }, // 28: 4x4, 10 slides, route 6
+            { 971839, 13 }, // 29: 4x4, 11 slides, route 7
+            { 239745, 14 }, // 30: 4x4, 12 slides, route 9
+        };
+
+        /// <summary>Campaign level n (1-30) in the board shape for this screen.</summary>
+        public static TrekLevel Campaign(int n, bool portrait)
+        {
+            var table = portrait ? s_Portrait : s_Landscape;
+            if (n < 1 || n > table.GetLength(0)) return Generate(n, n * 1009 + 17, false, portrait);
+            var lv = Generate(n, table[n - 1, 0], false, portrait);
+            lv.par = table[n - 1, 1];
+            lv.targetTime = 4f + lv.pathLength * 3.2f + lv.par * 1.1f;
+            return lv;
         }
 
         static void SizeFor(int n, bool daily, out int w, out int h)
@@ -148,6 +239,8 @@ namespace MiniPlatformer
                 int[] sides = { RoomDef.L, RoomDef.R, RoomDef.U, RoomDef.D };
                 int n = 1 + rng.Next(2);
                 for (int k = 0; k < n; k++) r.open |= sides[rng.Next(4)];
+                // never a trap: a hero who drops into a decoy must be able to walk out of it again
+                if ((r.open & (RoomDef.L | RoomDef.R)) == 0) r.open |= rng.Next(2) == 0 ? RoomDef.L : RoomDef.R;
                 rooms.Add(r);
                 lv.solved[c] = r.id;
             }
@@ -157,6 +250,7 @@ namespace MiniPlatformer
             int depth = daily ? 24 : Mathf.Clamp(2 + Mathf.RoundToInt(number * 0.55f), 2, 30);
             lv.layout = (int[])lv.solved.Clone();
             int hole = empty, prevHole = -1, moves = 0;
+            lv.scramblePath.Add(hole);
             for (int guard = 0; guard < 400 && (moves < depth || lv.Connected(lv.layout) || lv.StartIsDeadly(lv.layout)); guard++)
             {
                 var nbrs = lv.Neighbours(hole);
@@ -166,6 +260,7 @@ namespace MiniPlatformer
                 lv.layout[pickCell] = -1;
                 prevHole = hole;
                 hole = pickCell;
+                lv.scramblePath.Add(hole);
                 moves++;
             }
             if (lv.Connected(lv.layout) || lv.StartIsDeadly(lv.layout)) return null;
@@ -323,10 +418,13 @@ namespace MiniPlatformer
 
         /// <summary>
         /// Next slide towards the solution as (cell that moves into the hole), or -1. Iterative deepening with a
-        /// distance heuristic on the route rooms; gives up after a node budget on big boards.
+        /// distance heuristic on the route rooms; gives up after a node budget or time limit on big boards (the board
+        /// then falls back to undoing the scramble, which always works).
         /// </summary>
         int m_GoalRoom = -1;
         float m_GoalX, m_GoalDir;
+        readonly System.Diagnostics.Stopwatch m_Clock = new System.Diagnostics.Stopwatch();
+        long m_TimeLimitMs = long.MaxValue;
 
         /// <summary>Goal of the hint search: the hero's walk (from the given room/position, or the start) reaches the trophy.</summary>
         bool GoalReached(int[] s)
@@ -337,15 +435,28 @@ namespace MiniPlatformer
         }
 
         /// <summary>Hint towards a route that works for the hero where they are now (heroRoom = room id they're in).</summary>
-        public int HintMove(int[] current, int heroRoom, float heroX, float heroDir, int budget = 120000)
+        public int HintMove(int[] current, int heroRoom, float heroX, float heroDir, int budget = 120000, long timeLimitMs = long.MaxValue)
         {
             m_GoalRoom = heroRoom; m_GoalX = heroX; m_GoalDir = heroDir;
-            try { return HintMove(current, budget); }
+            try { return HintMove(current, budget, timeLimitMs); }
             finally { m_GoalRoom = -1; }
         }
 
-        public int HintMove(int[] current, int budget = 120000)
+        /// <summary>Fewest slides that solve the board from the start (the hero still at the start), or -1 if the
+        /// search runs out of budget. Used to pick the campaign levels and to set their par.</summary>
+        public int SolutionLength(int[] current, int budget)
         {
+            if (Connected(current)) return 0;
+            m_LastPath = null;
+            return HintMove(current, budget) >= 0 && m_LastPath != null ? m_LastPath.Count : -1;
+        }
+
+        List<int> m_LastPath;
+
+        public int HintMove(int[] current, int budget = 120000, long timeLimitMs = long.MaxValue)
+        {
+            m_TimeLimitMs = timeLimitMs;
+            m_Clock.Restart();
             var state = (int[])current.Clone();
             var target = new int[rooms.Length];
             for (int c = 0; c < solved.Length; c++) if (solved[c] >= 0) target[solved[c]] = c;
@@ -355,7 +466,7 @@ namespace MiniPlatformer
             for (int iter = 0; iter < 40; iter++)
             {
                 int t = Search(state, target, 0, bound, -1, pathMoves, ref nodes, budget);
-                if (t == -1) return pathMoves.Count > 0 ? pathMoves[0] : -1;
+                if (t == -1) { m_LastPath = pathMoves; return pathMoves.Count > 0 ? pathMoves[0] : -1; }
                 if (t == int.MaxValue || nodes > budget) break;
                 bound = t;
             }
@@ -377,11 +488,12 @@ namespace MiniPlatformer
 
         int Search(int[] s, int[] target, int g, int bound, int prevHole, List<int> moves, ref int nodes, int budget)
         {
-            int hcost = Heuristic(s, target);
-            int f = g + hcost;
-            if (f > bound) return f;
+            // goal first: from where the hero stands, a working route can look nothing like the planned one, so the
+            // heuristic must never prune a state that already solves it
             if (GoalReached(s)) return -1;
-            if (++nodes > budget) return int.MaxValue;
+            int f = g + Heuristic(s, target);
+            if (f > bound) return f;
+            if (++nodes > budget || m_Clock.ElapsedMilliseconds > m_TimeLimitMs) return int.MaxValue;
             int hole = System.Array.IndexOf(s, -1);
             int min = int.MaxValue;
             foreach (int n in Neighbours(hole))

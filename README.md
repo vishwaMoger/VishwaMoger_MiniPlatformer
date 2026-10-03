@@ -10,7 +10,14 @@ in real time, keeping them out of trap rooms (spikes, saws, fire, critters) and 
 - **Cheers** as you get closer: halfway there, almost there, path complete.
 - Once the route is complete the rooms **melt into one seamless hall**, the board locks, and the hero runs home.
 - Stars per puzzle: **solved**, **fast** (under the target time), **smart** (at or under par slides).
-- Endless generated levels (a solvable board from every level number), a **daily puzzle**, 4 heroes.
+- **30 hand-picked campaign levels** (5 worlds x 6), chosen from generated candidates by the dev console `curate`:
+  each is proven solvable from the start, sits on a smooth difficulty curve (1 to 12 slides) and has a fair start.
+  Seeds and par live in `TrekLevel.s_Landscape` / `s_Portrait` (phones get their own portrait-shaped picks).
+  Plus a **daily puzzle** and 4 heroes.
+- **Hints never fail**: a quick search for the best move from where the hero is; otherwise the next step of undoing
+  the scramble (the planned route works from any of its rooms); if the hero is stranded off-route, they hop back to
+  the start first. Decoy rooms never trap the hero (every room they can drop into has a side door).
+- The trophy room is unmistakable: gold frame, GOAL label, glowing entrance doorway; the start room says START.
 - Five **season worlds** with weather and lighting: Spring Meadow (petals), Autumn Woods (leaves), Rainy Peaks
   (rain, lightning, lamps), Firefly Night, Snowy Castle (snowfall, frost, snow caps).
 - **Phones play portrait**: tall boards (columns and rows swapped), a 1150-wide portrait UI, full-window web page.
@@ -47,7 +54,9 @@ and scrambles with real slides, so every level is solvable. `TrekLevel.Walk` sim
 exactly like the physics, and drives the solved check, the hint solver, progress cheers and the route trail.
 
 Editor-only dev console (`Temp/devcmd.txt`, `Tools/dev.sh`): `level N`, `daily`, `slide left|right|up|down`, `solve`,
-`hint`, `path`, `gen A B` (generator report), `autotest A B` (solves each level and checks the hero reaches the trophy).
+`hint`, `path`, `gen A B` (generator report), `autotest A B` (solves each level and checks the hero reaches the trophy),
+`hintstress A B N [portrait]` (follows hints from many mid-game states), `curate 0|1` (re-picks the campaign levels),
+`cover` / `clip` / `sheet` / `trailer` (store assets, see `DevCapture.cs` and `Tools/trailer.sh`).
 
 ## CrazyGames (web)
 

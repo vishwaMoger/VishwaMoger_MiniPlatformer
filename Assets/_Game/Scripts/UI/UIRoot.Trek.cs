@@ -128,12 +128,13 @@ namespace MiniPlatformer
                 switch (b)
                 {
                     case Boosters.Freeze: board.Freeze(6f); Toast("FROZEN FOR 6 SECONDS!"); AudioManager.I?.Play("appear", 0.8f); break;
-                    case Boosters.Hint: if (!board.ShowHint()) Toast("NO HINT FOUND - TRY A FRESH START!"); break;
+                    case Boosters.Hint: if (!board.ShowHint()) Toast("THE ROUTE IS READY - WATCH THE HERO GO!"); break;
                     case Boosters.Solve: board.AutoSolve(); Toast("SOLVING..."); break;
                 }
                 RefreshBoosters();
             }
             if (b == Boosters.Freeze && board.Frozen) return;
+            if (b == Boosters.Hint && board.RouteReady) { Toast("THE ROUTE IS READY - WATCH THE HERO GO!"); return; } // nothing to hint: keep the booster
             if (b == Boosters.Solve && (board.PathComplete || board.AutoSolving)) return;
             if (Boosters.Use(b)) { Apply(); return; }
             if (Platform.RewardedAvailable)
@@ -346,9 +347,13 @@ namespace MiniPlatformer
 
             UIKit.Button(panel, "", "blue", new Vector2(0.5f, 0f), new Vector2(-290f, 100f), new Vector2(150f, 110f), () => Game.I.GoToMenu(r.daily ? MenuScreen.Title : MenuScreen.LevelSelect), r.daily ? UIArt.Home : UIArt.Levels, 0f, "back");
             UIKit.Button(panel, "", "yellow", new Vector2(0.5f, 0f), new Vector2(-110f, 100f), new Vector2(150f, 110f), () => Game.I.RetryAfterBreak(), UIArt.Restart);
+            bool lastLevel = !r.daily && r.level >= SaveSystem.MaxLevels;
             Button next = r.daily
                 ? UIKit.Button(panel, "MENU", "green", new Vector2(0.5f, 0f), new Vector2(170f, 100f), new Vector2(340f, 110f), () => Game.I.GoToMenu(MenuScreen.Title), UIArt.Home, 36f, "confirm")
+                : lastLevel
+                ? UIKit.Button(panel, "LEVELS", "green", new Vector2(0.5f, 0f), new Vector2(170f, 100f), new Vector2(340f, 110f), () => Game.I.GoToMenu(MenuScreen.LevelSelect), UIArt.Levels, 36f, "confirm")
                 : UIKit.Button(panel, "NEXT", "green", new Vector2(0.5f, 0f), new Vector2(170f, 100f), new Vector2(340f, 110f), () => Game.I.NextLevel(), UIArt.Play, 36f, "confirm");
+            if (lastLevel) Toast($"YOU BEAT ALL {SaveSystem.MaxLevels} LEVELS! GO FOR 3 STARS EVERYWHERE!");
             next.GetComponent<UIButtonFX>().pulse = 1f;
             Select(next);
 

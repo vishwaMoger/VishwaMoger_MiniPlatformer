@@ -49,7 +49,7 @@ namespace MiniPlatformer
 
     public static class SaveSystem
     {
-        public const int MaxLevels = 999;
+        public const int MaxLevels = TrekLevel.CampaignLength; // the 30 hand-picked campaign levels
         const string Key = "tiletrek_save_v1";
         static SaveData s_Data;
 

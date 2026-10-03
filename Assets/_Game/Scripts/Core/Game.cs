@@ -264,7 +264,16 @@ namespace MiniPlatformer
         public static bool? ForcePortrait;
 
         public static TrekLevel BuildLevel(int level, bool daily) =>
-            daily ? TrekLevel.Generate(20, Economy.Today * 7331 + 11, true, PortraitLevels) : TrekLevel.Generate(level, level * 1009 + 17, false, PortraitLevels);
+            daily ? TrekLevel.Generate(20, Economy.Today * 7331 + 11, true, PortraitLevels) : TrekLevel.Campaign(level, PortraitLevels);
+
+        /// <summary>What PLAY starts: the next new level, or once all are beaten the first one still missing stars.</summary>
+        public static int NextToPlay()
+        {
+            var d = SaveSystem.Data;
+            if (d.stars[SaveSystem.MaxLevels] == 0) return Mathf.Clamp(d.level, 1, SaveSystem.MaxLevels);
+            for (int n = 1; n <= SaveSystem.MaxLevels; n++) if (d.stars[n] != 7) return n;
+            return SaveSystem.MaxLevels;
+        }
 
         IEnumerator LoadRoutine(int level, bool daily, bool adBreak)
         {

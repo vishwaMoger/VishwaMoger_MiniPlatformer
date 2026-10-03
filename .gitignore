@@ -77,3 +77,7 @@ crashlytics-build.properties
 # dev screenshots from Tools/u.sh ushot
 /Assets/Temp/
 /Assets/Temp.meta
+
+# temporary files the Unity Performance Testing package writes during builds
+/Assets/Resources/PerformanceTestRun*
+/Assets/Resources.meta

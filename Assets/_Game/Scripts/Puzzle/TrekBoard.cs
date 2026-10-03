@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -45,6 +46,9 @@ namespace MiniPlatformer
 
         TrekRoom[] m_ByCell;
         int m_Empty;
+        // the empty slot's path since the solved board (scramble + every slide, back-and-forths cancelled):
+        // walking it backwards always solves the puzzle, so a hint can never come up empty
+        readonly List<int> m_HolePath = new List<int>();
         bool m_Sliding;
         SpriteRenderer m_Slot;
         Camera m_Cam;
@@ -122,6 +126,9 @@ namespace MiniPlatformer
             if (theme.lightning) gameObject.AddComponent<TrekStorm>();
             RefreshMovable();
             CountdownLeft = Countdown;
+            m_HolePath.Clear();
+            m_HolePath.AddRange(Level.scramblePath);
+            if (m_HolePath.Count == 0 || m_HolePath[m_HolePath.Count - 1] != m_Empty) { m_HolePath.Clear(); m_HolePath.Add(m_Empty); }
             UpdatePath(true);
         }
 
@@ -388,6 +395,8 @@ namespace MiniPlatformer
             m_ByCell[from] = null;
             room.cell = to;
             m_Empty = from;
+            if (m_HolePath.Count >= 2 && m_HolePath[m_HolePath.Count - 2] == from) m_HolePath.RemoveAt(m_HolePath.Count - 1);
+            else m_HolePath.Add(from);
             Slides++;
             if (carry) Hero.SetCarried(true, room.transform);
             foreach (var r in m_ByCell) if (r != null) r.SetMovable(false, 0);
@@ -444,20 +453,75 @@ namespace MiniPlatformer
             if (!Started) CountdownLeft = hold ? 999f : 0.01f;
         }
 
-        /// <summary>Next slide for a route that works from where the hero is right now.</summary>
-        public int HeroHint()
+        /// <summary>The hero's walk already reaches the trophy: nothing left to slide.</summary>
+        public bool RouteReady
         {
-            var lay = CurrentLayout();
-            int hc = HeroCell();
-            if (Hero == null || hc < 0 || lay[hc] < 0) return Level.HintMove(lay);
-            float lx = Mathf.Clamp(Hero.transform.position.x - CellPos(hc).x, 0.3f, TrekRoom.Size - 0.3f);
-            return Level.HintMove(lay, lay[hc], lx, Hero.Facing);
+            get
+            {
+                if (PathComplete) return true;
+                var lay = CurrentLayout();
+                int hc = HeroCell();
+                if (!Started || Hero == null || hc < 0 || lay[hc] < 0) return Level.Connected(lay);
+                float lx = Mathf.Clamp(Hero.transform.position.x - CellPos(hc).x, 0.3f, TrekRoom.Size - 0.3f);
+                return Level.Walk(lay, hc, lx, Hero.Facing, false).reached;
+            }
         }
 
-        /// <summary>Hint booster: flashes the room to slide next. False if no hint could be found.</summary>
+        /// <summary>
+        /// Next slide for a route that works from where the hero is right now. Always answers: the best short
+        /// solution if one is found quickly, otherwise the next step of undoing the scramble (the planned route works
+        /// from any of its rooms). If the hero is off the route in a room that can't be reached that way, 'rescue'
+        /// asks for the hero to be sent back to the start first.
+        /// </summary>
+        public int HeroHint(out bool rescue)
+        {
+            rescue = false;
+            var lay = CurrentLayout();
+            int hc = HeroCell();
+            bool atStart = !Started || Hero == null || hc < 0 || lay[hc] < 0;
+            int cell = atStart
+                ? Level.HintMove(lay, 60000, 150)
+                : Level.HintMove(lay, lay[hc], Mathf.Clamp(Hero.transform.position.x - CellPos(hc).x, 0.3f, TrekRoom.Size - 0.3f), Hero.Facing, 60000, 150);
+            if (cell >= 0) return cell;
+            int undo = m_HolePath.Count >= 2 ? m_HolePath[m_HolePath.Count - 2] : -1;
+            bool onRoute = atStart || lay[hc] < Level.pathLength;
+            if (!onRoute)
+            {
+                // off the planned route: undoing the scramble won't help here, so look harder before giving up
+                cell = Level.HintMove(lay, lay[hc], Mathf.Clamp(Hero.transform.position.x - CellPos(hc).x, 0.3f, TrekRoom.Size - 0.3f), Hero.Facing, 250000, 400);
+                if (cell >= 0) return cell;
+            }
+            if (!onRoute || undo < 0) rescue = true;
+            return undo;
+        }
+
+        public int HeroHint() => HeroHint(out _);
+
+        /// <summary>The hero is somewhere no route can reach: they hop back to the start room (board unchanged).</summary>
+        void RescueHero()
+        {
+            var start = RoomOf(Level.startRoom);
+            Level.StartSpawn(out float sx, out float facing);
+            FxSystem.Sparkle(Hero.transform.position, Color.white, 12, 4f);
+            Hero.transform.SetParent(transform, true);
+            Hero.Respawn(start.Origin + new Vector2(sx, 1f), facing);
+            if (Started && m_FreezeLeft <= 0f) Hero.Moving = true;
+            FxSystem.Sparkle(Hero.transform.position, new Color(1f, 0.9f, 0.5f), 16, 4f);
+            UIRoot.I?.Toast("THE HERO HOPPED BACK TO THE START!");
+            m_Dirty = true;
+            UpdatePath(true);
+        }
+
+        /// <summary>Hint booster: flashes the room to slide next. False only when there is nothing left to slide.</summary>
         public bool ShowHint()
         {
-            int cell = HeroHint();
+            if (Finished || RouteReady) return false;
+            int cell = HeroHint(out bool rescue);
+            if (rescue && Hero != null && !Hero.Dead && !Hero.Won)
+            {
+                RescueHero();
+                cell = HeroHint(out _);
+            }
             if (cell < 0 || m_ByCell[cell] == null) return false;
             if (m_HintRoom != null) m_HintRoom.SetHint(false);
             m_HintRoom = m_ByCell[cell];
@@ -605,6 +669,8 @@ namespace MiniPlatformer
                 else m_Empty = c;
             }
             m_Slot.transform.localPosition = CellPos(m_Empty) + Vector2.one * (TrekRoom.Size * 0.5f);
+            m_HolePath.Clear();
+            m_HolePath.Add(m_Empty); // the board is back in its solved arrangement
             RefreshMovable();
         }
     }
