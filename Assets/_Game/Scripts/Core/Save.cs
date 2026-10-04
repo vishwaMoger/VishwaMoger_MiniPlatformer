@@ -32,6 +32,9 @@ namespace MiniPlatformer
         public int missionsClaimed;
         public int missionRerolls;
         public int coinAdDay = -1;
+        public int winStreak;                 // puzzles solved in a row without a fail (coin bonus)
+        public int starChest;                 // new stars towards the next star chest
+        public int rushBest;                  // best Trek Rush run (stages cleared)
         public int coinAds;
         public int spinTokens;                // extra lucky spins, earned by solving puzzles
         public int tokenProgress;             // puzzles solved towards the next spin token

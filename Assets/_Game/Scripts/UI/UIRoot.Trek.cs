@@ -38,7 +38,7 @@ namespace MiniPlatformer
             // portrait: the level bar gets its own row under the buttons
             var top = UIKit.Rect(root, "Top", new Vector2(0.5f, 1f), new Vector2(0f, Portrait ? -190f : -62f), new Vector2(820f, 90f));
             UIKit.Panel(top, "glass", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(800f, 84f));
-            UIKit.Text(top, lv.daily ? "DAILY" : "LEVEL " + lv.number, 28f, new Vector2(0.5f, 0.5f), new Vector2(-280f, 0f), new Vector2(220f, 50f), TextStyle.Heading, UIKit.Gold);
+            UIKit.Text(top, Game.I.InRush ? "STAGE " + (Game.I.RushStage + 1) : lv.daily ? "DAILY" : "LEVEL " + lv.number, 28f, new Vector2(0.5f, 0.5f), new Vector2(-280f, 0f), new Vector2(220f, 50f), TextStyle.Heading, UIKit.Gold);
             m_TimeIcon = UIKit.Image(top, UIArt.Clock, new Vector2(0.5f, 0.5f), new Vector2(-120f, 0f), new Vector2(42f, 42f));
             m_TimeText = UIKit.Text(top, "", 26f, new Vector2(0.5f, 0.5f), new Vector2(0f, 0f), new Vector2(200f, 50f), TextStyle.Heading, null, TextAlignmentOptions.Left);
             m_SlideIcon = UIKit.Image(top, UIArt.Arrow(0), new Vector2(0.5f, 0.5f), new Vector2(150f, 0f), new Vector2(40f, 40f));
@@ -250,7 +250,7 @@ namespace MiniPlatformer
             UIKit.Text(ribbon.transform, "PAUSED", 42f, new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(420f, 80f), TextStyle.Dark);
             var b = Game.I.Board;
             if (b != null)
-                UIKit.Text(panel, b.Level.daily ? "DAILY PUZZLE" : "LEVEL " + b.Level.number, 22f, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(600f, 40f), TextStyle.Dark);
+                UIKit.Text(panel, Game.I.InRush ? "TREK RUSH - STAGE " + (Game.I.RushStage + 1) : b.Level.daily ? "DAILY PUZZLE" : "LEVEL " + b.Level.number, 22f, new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(600f, 40f), TextStyle.Dark);
             float y = -200f;
             var resume = UIKit.Button(panel, "RESUME", "green", new Vector2(0.5f, 1f), new Vector2(0f, y), new Vector2(460f, 96f), () => Game.I.TogglePause(), UIArt.Play, 32f, "confirm");
             y -= 110f;
@@ -292,6 +292,16 @@ namespace MiniPlatformer
             UIKit.Text(ribbon.transform, r.daily ? "DAILY SOLVED!" : "SOLVED!", 46f, new Vector2(0.5f, 0.5f), new Vector2(0f, 6f), new Vector2(700f, 90f), TextStyle.Heading, UIKit.Gold);
             UIKit.PopIn(panel, 0f, 0.4f);
             Tween.Punch(ribbon.transform, 0.15f, 0.4f);
+            if (r.streak >= 2)
+            {
+                // wins in a row: a coin bonus that a fail would take away
+                var badge = UIKit.Panel(ribbon.transform, "orange", new Vector2(1f, 0.5f), new Vector2(40f, 8f), new Vector2(230f, 76f), "Streak");
+                UIKit.Text(badge.transform, $"STREAK x{r.streak}", 24f, new Vector2(0.5f, 0.5f), new Vector2(0f, 12f), new Vector2(220f, 34f), TextStyle.Heading, UIKit.Cream);
+                UIKit.Text(badge.transform, $"+{r.streakBonus}% COINS", 15f, new Vector2(0.5f, 0.5f), new Vector2(0f, -16f), new Vector2(220f, 26f), TextStyle.Body, UIKit.Cream);
+                badge.transform.localRotation = Quaternion.Euler(0f, 0f, -7f);
+                badge.gameObject.AddComponent<UIWave>().single = true;
+            }
+            StarChestBar(root, r);
 
             string[] labels = { "SOLVED", $"UNDER {r.targetTime:0} SEC", $"{r.par} SLIDES OR LESS" };
             var starImgs = new Image[3];
@@ -386,6 +396,58 @@ namespace MiniPlatformer
                     yield return new WaitForSecondsRealtime(1.2f);
                 }
             m_StarsBefore = now;
+
+            // keep the flow going: NEXT counts down and starts the next puzzle unless the player does something
+            if (!r.daily && !lastLevel) yield return AutoNext(next, root);
+        }
+
+        IEnumerator AutoNext(Button next, RectTransform root)
+        {
+            var label = next != null ? next.GetComponentInChildren<TextMeshProUGUI>() : null;
+            if (label == null) yield break;
+            string original = label.text;
+            for (float left = 5f; left > 0f; left -= Time.unscaledDeltaTime)
+            {
+                if (root == null || label == null) yield break;
+                if (Input.anyKeyDown || Input.touchCount > 0 || Game.I.InLevel == false) { label.text = original; yield break; }
+                label.text = $"{original}  {Mathf.CeilToInt(left)}";
+                yield return null;
+            }
+            if (root != null) Game.I.NextLevel();
+        }
+
+        /// <summary>Progress towards the star chest under the results panel; fills (and pops open) as stars come in.</summary>
+        void StarChestBar(RectTransform root, TrekResult r)
+        {
+            var strip = UIKit.Rect(root, "StarChest", new Vector2(0.5f, 0.5f), new Vector2(0f, Portrait ? -500f : -462f), new Vector2(760f, 70f));
+            UIKit.Panel(strip, "glass", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760f, 70f));
+            UIKit.Image(strip, UIArt.Gift, new Vector2(0f, 0.5f), new Vector2(46f, 0f), new Vector2(54f, 54f));
+            UIKit.Text(strip, "STAR CHEST", 20f, new Vector2(0f, 0.5f), new Vector2(150f, 0f), new Vector2(160f, 34f), TextStyle.Body, UIKit.Cream);
+            const float barW = 380f;
+            UIKit.Panel(strip, "track", new Vector2(0f, 0.5f), new Vector2(240f + barW * 0.5f, 0f), new Vector2(barW, 30f));
+            var fill = UIKit.Panel(strip, "fill", new Vector2(0f, 0.5f), new Vector2(240f, 0f), new Vector2(0f, 26f), "Fill");
+            fill.rectTransform.pivot = new Vector2(0f, 0.5f);
+            var count = UIKit.Text(strip, "", 22f, new Vector2(1f, 0.5f), new Vector2(-70f, 0f), new Vector2(120f, 34f), TextStyle.Heading, UIKit.Gold);
+            float from = r.chestBefore / (float)Game.ChestStars;
+            float to = r.chestOpened ? 1f : r.chestAfter / (float)Game.ChestStars;
+            void Show(float k, int stars)
+            {
+                if (fill == null) return;
+                fill.rectTransform.sizeDelta = new Vector2(Mathf.Max(12f, barW * k), 26f);
+                count.text = $"{stars}/{Game.ChestStars}";
+            }
+            Show(from, r.chestBefore);
+            int target = r.chestOpened ? Game.ChestStars : r.chestAfter;
+            Tween.To(fill.rectTransform, 0.8f, k => Show(Mathf.Lerp(from, to, k), Mathf.RoundToInt(Mathf.Lerp(r.chestBefore, target, k))), Ease.OutCubic, true, () =>
+            {
+                if (!r.chestOpened || fill == null) return;
+                AudioManager.I?.Play("jackpot", 0.8f, 0f);
+                CoinBurst(strip.anchoredPosition, root, 12);
+                Toast($"STAR CHEST! +{Game.ChestCoins} COINS, +1 {Boosters.Names[r.chestBooster]}, +1 SPIN");
+                Show(r.chestAfter / (float)Game.ChestStars, r.chestAfter);
+            }, 1.2f);
+            if (!r.chestOpened && Game.ChestStars - r.chestAfter <= 3)
+                UIKit.Text(root, $"ONLY {Game.ChestStars - r.chestAfter} MORE STARS TO OPEN THE CHEST!", 18f, new Vector2(0.5f, 0.5f), strip.anchoredPosition + new Vector2(0f, -54f), new Vector2(760f, 30f), TextStyle.Body, UIKit.Gold);
         }
 
         int m_StarsBefore = -1;
@@ -463,7 +525,7 @@ namespace MiniPlatformer
             var panel = UIKit.Rect(root, "Panel", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(w, 600f));
             UIKit.Panel(panel, "panel", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(w, 600f));
             var ribbon = UIKit.Panel(panel, "red", new Vector2(0.5f, 1f), new Vector2(0f, 20f), new Vector2(620f, 120f));
-            UIKit.Text(ribbon.transform, "OUCH!", 50f, new Vector2(0.5f, 0.5f), new Vector2(0f, 6f), new Vector2(600f, 90f), TextStyle.Heading, UIKit.Cream);
+            var ribbonText = UIKit.Text(ribbon.transform, "OUCH!", 50f, new Vector2(0.5f, 0.5f), new Vector2(0f, 6f), new Vector2(600f, 90f), TextStyle.Heading, UIKit.Cream);
             var hero = LevelCatalog.Characters[Mathf.Clamp(SaveSystem.Data.character, 0, LevelCatalog.Characters.Length - 1)];
             var heroImg = UIKit.Image(panel, GameAssets.I.Sprite(hero.folder + "/Hit"), new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(140f, 140f), "Hero");
             heroImg.gameObject.AddComponent<UIImageAnim>().SetFrames(GameAssets.I.Frames(hero.folder + "/Hit"));
@@ -474,7 +536,20 @@ namespace MiniPlatformer
                 "SLIDE A ROOM IN BEFORE THE HERO REACHES THE GAP!",
                 "STUCK? THE HINT BUTTON SHOWS THE NEXT SLIDE.",
             };
-            UIKit.Text(panel, tips[Random.Range(0, tips.Length)], 22f, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(w - 80f, 50f), TextStyle.Dark, new Color32(214, 64, 84, 255));
+            // the message that makes "one more try" irresistible: a run to beat, a streak to save, or how close it was
+            string message = tips[Random.Range(0, tips.Length)];
+            int slidesLeft = b != null && !Game.I.InRush ? b.Level.SolutionLength(b.CurrentLayout(), 60000) : -1;
+            if (Game.I.InRush)
+            {
+                ribbonText.text = "RUSH OVER!";
+                string stages = Game.I.RushStage == 1 ? "1 STAGE" : Game.I.RushStage + " STAGES";
+                message = Game.I.RushNewBest ? $"NEW BEST! {stages} CLEARED" : $"{stages} - YOUR BEST IS {SaveSystem.Data.rushBest}";
+                UIKit.Text(panel, $"+{Game.I.RushCoins} COINS THIS RUN", 18f, new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(w - 80f, 30f), TextStyle.Dark, CoinInk);
+            }
+            else if (Game.I.StreakLost >= 2) message = canRevive ? $"DON'T LOSE YOUR {Game.I.StreakLost}-WIN STREAK - REVIVE TO KEEP IT!" : $"YOUR {Game.I.StreakLost}-WIN STREAK IS OVER!";
+            else if (slidesLeft >= 1 && slidesLeft <= 3) message = slidesLeft == 1 ? "SO CLOSE! ONLY 1 SLIDE FROM THE TROPHY!" : $"SO CLOSE! ONLY {slidesLeft} SLIDES FROM THE TROPHY!";
+            message = message.Replace("'", "");
+            UIKit.Text(panel, message, 22f, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(w - 80f, 50f), TextStyle.Dark, new Color32(214, 64, 84, 255));
             Button retry;
             if (canRevive)
             {

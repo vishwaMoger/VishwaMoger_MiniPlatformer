@@ -146,6 +146,7 @@ namespace MiniPlatformer
             { "yellow", new Palette("#FFE680", "#F7B52C", "#C57E14", "#A86A10") },
             { "red", new Palette("#FF9A8A", "#EC4F5B", "#B32E45", "#99243A") },
             { "purple", new Palette("#C9A2FF", "#8A5CEB", "#5E38B5", "#4E2D9A") },
+            { "orange", new Palette("#FFC27A", "#FF8A2B", "#C95E14", "#A84E10") },
             { "grey", new Palette("#E3E8F0", "#A5AEC0", "#6F7890", "#5E667C") },
         };
 

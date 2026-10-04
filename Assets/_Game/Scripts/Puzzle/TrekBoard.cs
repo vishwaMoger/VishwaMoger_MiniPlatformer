@@ -11,6 +11,10 @@ namespace MiniPlatformer
         public int level, stars, coins, slides, par;
         public float time, targetTime;
         public bool daily, newRecord, spinToken;
+        public int streak, streakBonus;           // wins in a row, and the coin bonus it gave (percent)
+        public int chestBefore, chestAfter;       // star chest progress before / after this solve
+        public bool chestOpened;
+        public int chestBooster;
     }
 
     /// <summary>

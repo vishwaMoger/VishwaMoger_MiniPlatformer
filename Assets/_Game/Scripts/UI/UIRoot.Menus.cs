@@ -112,17 +112,27 @@ namespace MiniPlatformer
             UIKit.Text(runSub.transform, solvedToday ? "SOLVED!" : "NEW TODAY!", 16f, new Vector2(0.5f, 0.5f), new Vector2(0f, 2f), new Vector2(170f, 30f), TextStyle.Body);
             runSub.transform.localRotation = Quaternion.Euler(0f, 0f, -6f);
             if (!solvedToday) runSub.gameObject.AddComponent<UIWave>().single = true;
-            var levels = UIKit.Button(col, "LEVELS", "blue", new Vector2(0.5f, 1f), new Vector2(0f, -290f), new Vector2(400f, 86f),
-                () => ShowMenu(MenuScreen.LevelSelect, (SaveSystem.Data.level - 1) / LevelsPerPage), UIArt.Levels, 30f);
-            var chars = UIKit.Button(col, "HEROES", "blue", new Vector2(0.5f, 1f), new Vector2(0f, -384f), new Vector2(400f, 86f),
-                () => ShowMenu(MenuScreen.Characters), null, 30f);
+            // Trek Rush: endless puzzles, unlocked after level 8
+            bool rushOpen = Game.RushUnlocked;
+            var rush = UIKit.Button(col, "TREK RUSH", "orange", new Vector2(0.5f, 1f), new Vector2(0f, -290f), new Vector2(400f, 86f),
+                () => { if (Game.RushUnlocked) Game.I.PlayRush(); else { AudioManager.I?.Play("error", 0.6f); Toast($"BEAT LEVEL {Game.RushUnlockLevel} TO UNLOCK TREK RUSH!"); } },
+                rushOpen ? UIArt.Play : UIArt.Lock, 30f, "confirm");
+            var rushBadge = UIKit.Panel(rush.transform, rushOpen ? "yellow" : "grey", new Vector2(1f, 1f), new Vector2(-6f, 6f), new Vector2(150f, 42f), "Badge");
+            UIKit.Text(rushBadge.transform, rushOpen ? (SaveSystem.Data.rushBest > 0 ? $"BEST {SaveSystem.Data.rushBest}" : "ENDLESS!") : $"LEVEL {Game.RushUnlockLevel}", 15f,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 2f), new Vector2(150f, 30f), TextStyle.Dark);
+            rushBadge.transform.localRotation = Quaternion.Euler(0f, 0f, -6f);
+            // levels and heroes share a row to make room
+            var levels = UIKit.Button(col, "LEVELS", "blue", new Vector2(0.5f, 1f), new Vector2(-102f, -384f), new Vector2(196f, 86f),
+                () => ShowMenu(MenuScreen.LevelSelect, (SaveSystem.Data.level - 1) / LevelsPerPage), null, 26f);
+            var chars = UIKit.Button(col, "HEROES", "blue", new Vector2(0.5f, 1f), new Vector2(102f, -384f), new Vector2(196f, 86f),
+                () => ShowMenu(MenuScreen.Characters), null, 26f);
             var settings = UIKit.Button(col, "SETTINGS", "yellow", new Vector2(0.5f, 1f), new Vector2(0f, -478f), new Vector2(400f, 86f),
                 () => OpenSettings(false), UIArt.Gear, 30f);
             Button quit = null;
             if (CanQuit)
                 quit = UIKit.Button(col, "QUIT", "red", new Vector2(0.5f, 1f), new Vector2(0f, -572f), new Vector2(400f, 86f), ConfirmQuit, UIArt.Close, 30f, "back");
             int i2 = 0;
-            foreach (var b in new[] { play, run, levels, chars, settings, quit })
+            foreach (var b in new[] { play, run, rush, levels, chars, settings, quit })
                 if (b != null) UIKit.SlideIn((RectTransform)b.transform, new Vector2(0f, -60f), 0.35f + 0.08f * i2++, 0.45f);
 
             // coins + the daily loops (red dots when something is waiting)

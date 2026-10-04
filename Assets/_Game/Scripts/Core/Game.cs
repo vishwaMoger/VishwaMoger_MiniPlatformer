@@ -27,6 +27,22 @@ namespace MiniPlatformer
         public bool InLevel => m_Board != null;
         public int CurrentLevel { get; private set; } = 1;
         public bool InDaily { get; private set; }
+
+        // ---- Trek Rush: endless back-to-back puzzles that keep getting harder, one run, beat your best
+        public bool InRush { get; private set; }
+        public int RushStage { get; private set; }
+        public int RushCoins { get; private set; }
+        public bool RushNewBest { get; private set; }
+        public const int RushUnlockLevel = 8;
+        public static bool RushUnlocked => SaveSystem.Data.stars[RushUnlockLevel] != 0;
+        /// <summary>Generator difficulty for a Rush stage: starts mid-campaign and climbs two levels per stage.</summary>
+        public static int RushDifficulty(int stage) => Mathf.Clamp(6 + stage * 2, 6, TrekLevel.CampaignLength);
+
+        // ---- win streak and star chest
+        public const int ChestStars = 10, ChestCoins = 150;
+        /// <summary>The streak a fail just broke (0 if none); a revive gives it back.</summary>
+        public int StreakLost { get; private set; }
+        int m_StreakBackup;
         public TrekBoard Board => m_Board;
         public bool Busy => m_Busy;
 
@@ -254,8 +270,18 @@ namespace MiniPlatformer
             StartCoroutine(LoadRoutine(CurrentLevel, true, adBreak));
         }
 
-        public void RestartLevel() { if (InDaily) PlayDaily(); else PlayLevel(CurrentLevel); }
-        public void RetryAfterBreak() { if (InDaily) PlayDaily(true); else PlayLevel(CurrentLevel, true); }
+        public void RestartLevel() { if (InRush) PlayRush(); else if (InDaily) PlayDaily(); else PlayLevel(CurrentLevel); }
+        public void RetryAfterBreak() { if (InRush) PlayRush(true); else if (InDaily) PlayDaily(true); else PlayLevel(CurrentLevel, true); }
+
+        /// <summary>Starts a new Trek Rush run from stage 1.</summary>
+        public void PlayRush(bool adBreak = false)
+        {
+            if (m_Busy) return;
+            RushStage = 0;
+            RushCoins = 0;
+            RushNewBest = false;
+            StartCoroutine(LoadRoutine(CurrentLevel, false, adBreak, true));
+        }
         public void NextLevel() => PlayLevel(CurrentLevel + 1, true);
 
         /// <summary>Phones (and any upright screen) play portrait-shaped boards.</summary>
@@ -275,7 +301,7 @@ namespace MiniPlatformer
             return SaveSystem.MaxLevels;
         }
 
-        IEnumerator LoadRoutine(int level, bool daily, bool adBreak)
+        IEnumerator LoadRoutine(int level, bool daily, bool adBreak, bool rush = false)
         {
             m_Busy = true;
             Platform.GameplayStop();
@@ -296,8 +322,9 @@ namespace MiniPlatformer
 
             CurrentLevel = level;
             InDaily = daily;
+            InRush = rush;
             TrekHero.SpeedMul = Mathf.Clamp(SaveSystem.Data.speed, 1, 3);
-            var lv = BuildLevel(level, daily);
+            var lv = rush ? TrekLevel.Generate(RushDifficulty(RushStage), UnityEngine.Random.Range(1, int.MaxValue / 2), false, PortraitLevels) : BuildLevel(level, daily);
             var theme = LevelCatalog.Worlds[lv.world];
             ApplyWorld(theme);
             m_Global.intensity = theme.puzzleLight; // night worlds stay dark and let the room lamps do the work
@@ -306,9 +333,27 @@ namespace MiniPlatformer
             UIRoot.I.ShowTrekHUD(m_Board);
             yield return null;
             yield return UIRoot.I.IrisOpen(new Vector2(0.5f, 0.5f));
-            Platform.SetLevelContext(daily ? "daily" : level.ToString());
+            Platform.SetLevelContext(rush ? "rush " + (RushStage + 1) : daily ? "daily" : level.ToString());
             Platform.GameplayStart();
             m_Busy = false;
+        }
+
+        void OnRushStageWon()
+        {
+            int coins = 8 + RushStage * 2;
+            RushStage++;
+            RushCoins += coins;
+            Economy.AddCoins(coins);
+            Economy.AddTokenProgress();
+            Missions.Report(MissionKind.ClearLevels, 1);
+            Missions.Report(MissionKind.Coins, coins);
+            SaveSystem.Save();
+            AudioManager.I.Play("complete", 0.8f, 0f);
+            UIRoot.I.Toast($"STAGE {RushStage} CLEARED!  +{coins}");
+            if (SaveSystem.Data.rushBest > 0 && RushStage == SaveSystem.Data.rushBest + 1)
+                UIRoot.I.RunRealtime(0.8f, () => UIRoot.I.Toast("NEW BEST RUN!"));
+            // straight on to the next, harder stage: no menus in between
+            UIRoot.I.RunRealtime(1.5f, () => { if (InRush && m_ShowingResults && !m_Busy) StartCoroutine(LoadRoutine(CurrentLevel, false, false, true)); });
         }
 
         public void TogglePause()
@@ -330,6 +375,7 @@ namespace MiniPlatformer
         {
             m_ShowingResults = true;
             Platform.GameplayStop();
+            if (InRush) { OnRushStageWon(); return; }
             int fresh;
             if (r.daily)
             {
@@ -347,6 +393,29 @@ namespace MiniPlatformer
 
             int starCount = (r.stars & 1) + ((r.stars >> 1) & 1) + ((r.stars >> 2) & 1);
             r.coins += SolveReward + StarReward * starCount + (r.daily ? 50 : 0);
+
+            // win streak: +10% coins per win in a row (up to +100%); a fail breaks it
+            var save = SaveSystem.Data;
+            save.winStreak++;
+            StreakLost = 0;
+            r.streak = save.winStreak;
+            r.streakBonus = Mathf.Min(save.winStreak - 1, 10) * 10;
+            r.coins += r.coins * r.streakBonus / 100;
+
+            // star chest: every 10 new stars
+            int newStars = (fresh & 1) + ((fresh >> 1) & 1) + ((fresh >> 2) & 1);
+            r.chestBefore = save.starChest;
+            save.starChest += newStars;
+            if (save.starChest >= ChestStars)
+            {
+                save.starChest -= ChestStars;
+                r.chestOpened = true;
+                r.chestBooster = UnityEngine.Random.Range(0, Boosters.Count - 1);
+                Economy.AddCoins(ChestCoins);
+                Boosters.Give(r.chestBooster, 1, false);
+                save.spinTokens++;
+            }
+            r.chestAfter = save.starChest;
             r.spinToken = Economy.AddTokenProgress();
             Economy.AddCoins(r.coins);
             Missions.Report(MissionKind.ClearLevels, 1);
@@ -367,6 +436,17 @@ namespace MiniPlatformer
         {
             m_ShowingResults = true;
             Platform.GameplayStop();
+            if (InRush)
+            {
+                RushNewBest = RushStage > SaveSystem.Data.rushBest;
+                if (RushNewBest) { SaveSystem.Data.rushBest = RushStage; Platform.HappyTime(); }
+            }
+            else
+            {
+                StreakLost = SaveSystem.Data.winStreak >= 2 ? SaveSystem.Data.winStreak : 0;
+                if (StreakLost > 0) m_StreakBackup = SaveSystem.Data.winStreak;
+                SaveSystem.Data.winStreak = 0;
+            }
             SaveSystem.Save();
             AudioManager.I.Duck(0.3f, 2.5f);
             AudioManager.I.Play("gameover", 0.9f, 0f);
@@ -381,6 +461,7 @@ namespace MiniPlatformer
             SetPaused(false);
             UIRoot.I.CloseTrekFail();
             m_Board.Revive();
+            if (StreakLost > 0) { SaveSystem.Data.winStreak = m_StreakBackup; StreakLost = 0; } // the revive saves the streak
             AudioManager.I.Play("checkpoint", 0.9f, 0f);
             UIRoot.I.Toast("REVIVED! FIX THE PATH!"); // confirm the rewarded video paid out
             Platform.GameplayStart();

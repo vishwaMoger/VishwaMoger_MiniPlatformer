@@ -63,78 +63,78 @@ namespace MiniPlatformer
 
         public const int CampaignLength = 30;
 
-        /// <summary>Difficulty curve: the fewest slides each campaign level needs (5 worlds x 6 levels; each new board
-        /// size starts a little easier again).</summary>
-        public static readonly int[] TargetSlides = { 1, 2, 2, 3, 3, 4,  4, 5, 4, 5, 5, 6,  6, 6, 7, 7, 7, 8,  7, 8, 8, 9, 9, 10,  8, 9, 10, 10, 11, 12 };
+        /// <summary>Difficulty curve: the fewest slides each campaign level needs, climbing from 2 to 20 (each new board
+        /// size, at levels 3, 7, 15 and 23, eases off a little before climbing again).</summary>
+        public static readonly int[] TargetSlides = { 2, 3, 3, 4, 5, 6,  5, 6, 7, 8, 8, 9,  10, 11, 9, 10, 11, 12,  13, 14, 14, 15, 12, 13,  14, 15, 16, 17, 18, 20 };
 
         // Hand-picked levels {seed, par}, chosen by the dev console `curate` from many generated candidates: proven
         // solvable from the start, on the difficulty curve, with a fair start. NOTE: changing the generator changes
         // what a seed produces, so re-run `curate 0` and `curate 1` after touching TryGenerate.
         static readonly int[,] s_Landscape =
         {
-            { 1026, 2 }, // 1: 3x2, 1 slides, route 2
-            { 106764, 3 }, // 2: 3x2, 2 slides, route 3
-            { 631418, 3 }, // 3: 3x3, 2 slides, route 3
-            { 108782, 4 }, // 4: 3x3, 3 slides, route 4
-            { 1052352, 4 }, // 5: 3x3, 3 slides, route 4
-            { 634445, 5 }, // 6: 3x3, 4 slides, route 5
-            { 425996, 6 }, // 7: 3x3, 4 slides, route 5
-            { 5035081, 7 }, // 8: 3x3, 5 slides, route 6
-            { 1161117, 6 }, // 9: 4x3, 4 slides, route 6
-            { 1162126, 7 }, // 10: 4x3, 5 slides, route 6
-            { 115845, 7 }, // 11: 4x3, 5 slides, route 5
-            { 12125, 8 }, // 12: 4x3, 6 slides, route 6
-            { 3155004, 8 }, // 13: 4x3, 6 slides, route 4
-            { 223601, 8 }, // 14: 4x3, 6 slides, route 4
-            { 1586087, 9 }, // 15: 4x3, 7 slides, route 6
-            { 3576947, 9 }, // 16: 4x3, 7 slides, route 5
-            { 331357, 9 }, // 17: 4x3, 7 slides, route 9
-            { 2112759, 10 }, // 18: 4x3, 8 slides, route 6
-            { 333375, 9 }, // 19: 4x3, 7 slides, route 10
-            { 1905319, 10 }, // 20: 4x3, 8 slides, route 7
-            { 3058347, 10 }, // 21: 4x3, 8 slides, route 8
-            { 2326253, 11 }, // 22: 4x3, 9 slides, route 6
-            { 5992777, 11 }, // 23: 4x3, 9 slides, route 6
-            { 2118813, 12 }, // 24: 4x3, 10 slides, route 7
-            { 234700, 10 }, // 25: 4x4, 8 slides, route 12
-            { 2225560, 11 }, // 26: 4x4, 9 slides, route 8
-            { 341447, 12 }, // 27: 4x4, 10 slides, route 10
-            { 132998, 12 }, // 28: 4x4, 10 slides, route 6
-            { 971839, 13 }, // 29: 4x4, 11 slides, route 7
-            { 239745, 14 }, // 30: 4x4, 12 slides, route 9
+            { 210484, 3 }, // 1: 3x2, 2 slides, route 2
+            { 106764, 4 }, // 2: 3x2, 3 slides, route 3
+            { 317231, 4 }, // 3: 3x3, 3 slides, route 3
+            { 841885, 5 }, // 4: 3x3, 4 slides, route 4
+            { 5062, 6 }, // 5: 3x3, 5 slides, route 4
+            { 1995922, 7 }, // 6: 3x3, 6 slides, route 5
+            { 6186091, 7 }, // 7: 4x3, 5 slides, route 5
+            { 531734, 8 }, // 8: 4x3, 6 slides, route 6
+            { 11215101, 9 }, // 9: 4x3, 7 slides, route 6
+            { 8178969, 10 }, // 10: 4x3, 8 slides, route 6
+            { 2105696, 10 }, // 11: 4x3, 8 slides, route 5
+            { 15616746, 11 }, // 12: 4x3, 9 slides, route 6
+            { 4202294, 12 }, // 13: 4x3, 10 slides, route 7
+            { 7449902, 13 }, // 14: 4x3, 11 slides, route 6
+            { 957713, 11 }, // 15: 4x4, 9 slides, route 7
+            { 12059996, 12 }, // 16: 4x4, 10 slides, route 10
+            { 4101601, 13 }, // 17: 4x4, 11 slides, route 6
+            { 856011, 13 }, // 18: 4x4, 11 slides, route 8
+            { 3894161, 15 }, // 19: 4x4, 13 slides, route 8
+            { 14472799, 15 }, // 20: 4x4, 13 slides, route 8
+            { 2325244, 16 }, // 21: 4x4, 14 slides, route 10
+            { 2745169, 17 }, // 22: 4x4, 15 slides, route 8
+            { 3269823, 14 }, // 23: 5x4, 12 slides, route 8
+            { 128962, 15 }, // 24: 5x4, 13 slides, route 9
+            { 4214402, 16 }, // 25: 5x4, 14 slides, route 10
+            { 864083, 17 }, // 26: 5x4, 15 slides, route 10
+            { 10081244, 18 }, // 27: 5x4, 16 slides, route 9
+            { 5369448, 19 }, // 28: 5x4, 17 slides, route 13
+            { 10292720, 20 }, // 29: 5x4, 18 slides, route 9
+            { 7884962, 22 }, // 30: 5x4, 20 slides, route 10
         };
         static readonly int[,] s_Portrait =
         {
-            { 105755, 2 }, // 1: 2x3, 1 slides, route 2
-            { 525680, 3 }, // 2: 2x3, 2 slides, route 3
-            { 631418, 3 }, // 3: 3x3, 2 slides, route 3
-            { 108782, 4 }, // 4: 3x3, 3 slides, route 4
-            { 1052352, 4 }, // 5: 3x3, 3 slides, route 4
-            { 634445, 5 }, // 6: 3x3, 4 slides, route 5
-            { 425996, 6 }, // 7: 3x3, 4 slides, route 5
-            { 5035081, 7 }, // 8: 3x3, 5 slides, route 6
-            { 1056388, 6 }, // 9: 3x4, 4 slides, route 6
-            { 2314145, 7 }, // 10: 3x4, 5 slides, route 7
-            { 3257715, 7 }, // 11: 3x4, 5 slides, route 7
-            { 1583060, 8 }, // 12: 3x4, 6 slides, route 7
-            { 641508, 8 }, // 13: 3x4, 6 slides, route 8
-            { 1689807, 8 }, // 14: 3x4, 6 slides, route 8
-            { 5042144, 9 }, // 15: 3x4, 7 slides, route 9
-            { 225619, 9 }, // 16: 3x4, 7 slides, route 8
-            { 7243471, 9 }, // 17: 3x4, 7 slides, route 9
-            { 541824, 10 }, // 18: 3x4, 8 slides, route 8
-            { 2637413, 9 }, // 19: 3x4, 7 slides, route 6
-            { 124926, 10 }, // 20: 3x4, 8 slides, route 6
-            { 1068496, 10 }, // 21: 3x4, 8 slides, route 6
-            { 2954627, 11 }, // 22: 3x4, 9 slides, route 7
-            { 232682, 11 }, // 23: 3x4, 9 slides, route 8
-            { 966794, 12 }, // 24: 3x4, 10 slides, route 7
-            { 234700, 10 }, // 25: 4x4, 8 slides, route 12
-            { 2225560, 11 }, // 26: 4x4, 9 slides, route 8
-            { 341447, 12 }, // 27: 4x4, 10 slides, route 10
-            { 132998, 12 }, // 28: 4x4, 10 slides, route 6
-            { 971839, 13 }, // 29: 4x4, 11 slides, route 7
-            { 239745, 14 }, // 30: 4x4, 12 slides, route 9
+            { 1153045, 3 }, // 1: 2x3, 2 slides, route 2
+            { 2035, 4 }, // 2: 2x3, 3 slides, route 3
+            { 317231, 4 }, // 3: 3x3, 3 slides, route 3
+            { 841885, 5 }, // 4: 3x3, 4 slides, route 4
+            { 5062, 6 }, // 5: 3x3, 5 slides, route 4
+            { 1995922, 7 }, // 6: 3x3, 6 slides, route 5
+            { 5662446, 7 }, // 7: 3x4, 5 slides, route 5
+            { 6920203, 8 }, // 8: 3x4, 6 slides, route 6
+            { 5873922, 9 }, // 9: 3x4, 7 slides, route 6
+            { 15614728, 10 }, // 10: 3x4, 8 slides, route 7
+            { 4933379, 10 }, // 11: 3x4, 8 slides, route 7
+            { 2211434, 11 }, // 12: 3x4, 9 slides, route 6
+            { 13134, 12 }, // 13: 3x4, 10 slides, route 8
+            { 5564780, 13 }, // 14: 3x4, 11 slides, route 7
+            { 957713, 11 }, // 15: 4x4, 9 slides, route 7
+            { 12059996, 12 }, // 16: 4x4, 10 slides, route 10
+            { 4101601, 13 }, // 17: 4x4, 11 slides, route 6
+            { 856011, 13 }, // 18: 4x4, 11 slides, route 8
+            { 3894161, 15 }, // 19: 4x4, 13 slides, route 8
+            { 14472799, 15 }, // 20: 4x4, 13 slides, route 8
+            { 2325244, 16 }, // 21: 4x4, 14 slides, route 10
+            { 2745169, 17 }, // 22: 4x4, 15 slides, route 8
+            { 12590704, 14 }, // 23: 4x5, 12 slides, route 12
+            { 2118813, 15 }, // 24: 4x5, 13 slides, route 9
+            { 1596177, 16 }, // 25: 4x5, 14 slides, route 13
+            { 2225560, 17 }, // 26: 4x5, 15 slides, route 9
+            { 10709618, 17 }, // 27: 4x5, 15 slides, route 9
+            { 6626196, 18 }, // 28: 4x5, 16 slides, route 13
+            { 8093411, 20 }, // 29: 4x5, 18 slides, route 10
+            { 2962699, 22 }, // 30: 4x5, 20 slides, route 13
         };
 
         /// <summary>Campaign level n (1-30) in the board shape for this screen.</summary>
@@ -151,10 +151,11 @@ namespace MiniPlatformer
         static void SizeFor(int n, bool daily, out int w, out int h)
         {
             if (daily) { w = 4; h = 3; return; }
+            // the campaign grows a board size every world or so: 3x2, 3x3, 4x3, 4x4, then 5x4 for the last world
             if (n <= 2) { w = 3; h = 2; }
-            else if (n <= 8) { w = 3; h = 3; }
-            else if (n <= 24) { w = 4; h = 3; }
-            else if (n <= 45) { w = 4; h = 4; }
+            else if (n <= 6) { w = 3; h = 3; }
+            else if (n <= 14) { w = 4; h = 3; }
+            else if (n <= 22) { w = 4; h = 4; }
             else { w = 5; h = 4; }
         }
 
@@ -166,7 +167,7 @@ namespace MiniPlatformer
             int cells = w * h;
             var lv = new TrekLevel { number = number, seed = seed, w = w, h = h, daily = daily };
             lv.world = daily ? seed % LevelCatalog.Worlds.Length : ((number - 1) / 6) % LevelCatalog.Worlds.Length;
-            float diff = daily ? 0.6f : Mathf.Clamp01((number - 1) / 50f);
+            float diff = daily ? 0.6f : Mathf.Clamp01((number - 1) / (float)(CampaignLength - 1));
 
             // ---- route: a self-avoiding walk that only goes sideways or down
             int targetLen = Mathf.Clamp(2 + number / 2, 2, cells - 2);
@@ -218,15 +219,15 @@ namespace MiniPlatformer
             var free = new List<int>();
             for (int i = 0; i < cells; i++) if (lv.solved[i] < 0) free.Add(i);
             int empty = free[rng.Next(free.Count)];
-            float hazardChance = Mathf.Lerp(0.15f, 0.6f, diff);
+            float hazardChance = Mathf.Lerp(0.2f, 0.7f, diff);
             foreach (int c in free)
             {
                 if (c == empty) continue;
                 var r = new RoomDef { id = rooms.Count, variant = rng.Next(100) };
                 if (number >= 2 && rng.NextDouble() < hazardChance)
                 {
-                    var kinds = number < 6 ? new[] { RoomKind.Spikes } :
-                                number < 12 ? new[] { RoomKind.Spikes, RoomKind.Critter } :
+                    var kinds = number < 5 ? new[] { RoomKind.Spikes } :
+                                number < 9 ? new[] { RoomKind.Spikes, RoomKind.Critter } :
                                 new[] { RoomKind.Spikes, RoomKind.Critter, RoomKind.Saw, RoomKind.Fire };
                     r.kind = kinds[rng.Next(kinds.Length)];
                 }
@@ -247,7 +248,7 @@ namespace MiniPlatformer
             lv.rooms = rooms.ToArray();
 
             // ---- scramble with real slides (so the solution exists), then sanity-check the start
-            int depth = daily ? 24 : Mathf.Clamp(2 + Mathf.RoundToInt(number * 0.55f), 2, 30);
+            int depth = daily ? 24 : Mathf.Clamp(4 + Mathf.RoundToInt(number * 1.4f), 4, 48);
             lv.layout = (int[])lv.solved.Clone();
             int hole = empty, prevHole = -1, moves = 0;
             lv.scramblePath.Add(hole);

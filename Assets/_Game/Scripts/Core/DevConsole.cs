@@ -86,9 +86,9 @@ namespace MiniPlatformer
                             var bd = Game.I.Board;
                             if (bd == null || bd.Level.number != n) { sb.Append($"L{n}:noload "); continue; }
                             bd.Freeze(120f);
-                            for (int i = 0; i < 60 && !bd.Level.Connected(bd.CurrentLayout()); i++)
+                            for (int i = 0; i < 200 && !bd.Level.Connected(bd.CurrentLayout()); i++)
                             {
-                                int c = bd.Level.HintMove(bd.CurrentLayout());
+                                int c = bd.HeroHint(); // the same hint the player gets (search, else undo the scramble)
                                 if (c < 0) break;
                                 if (!bd.TrySlideFrom(c)) { yield return new WaitForSeconds(0.2f); continue; }
                                 yield return new WaitForSeconds(0.25f);
@@ -169,9 +169,11 @@ namespace MiniPlatformer
                         // the one closest to the difficulty curve with a fair start; writes the {seed, par} table.
                         bool portrait = F(1) > 0f;
                         int candidates = (int)F(2, 80);
+                        int budget = (int)F(3, 1500000);
+                        int fromN = (int)F(4, 1), toN = (int)F(5, TrekLevel.CampaignLength);
                         var table = new StringBuilder();
                         var report = new StringBuilder();
-                        for (int n = 1; n <= TrekLevel.CampaignLength; n++)
+                        for (int n = fromN; n <= toN; n++)
                         {
                             int target = TrekLevel.TargetSlides[n - 1];
                             TrekLevel best = null; int bestOpt = -1; float bestScore = float.MaxValue;
@@ -179,17 +181,30 @@ namespace MiniPlatformer
                             {
                                 var lv = TrekLevel.Generate(n, n * 1009 + 17 + k * 104729, false, portrait);
                                 if (lv.number != n) continue; // generator fell back to a tiny board
-                                int opt = lv.SolutionLength(lv.layout, 400000);
+                                int opt = lv.SolutionLength(lv.layout, budget);
                                 if (opt < 1) continue;
                                 var walk = lv.WalkFromStart(lv.layout);
                                 float dist = 0f;
                                 for (int i = 1; i < walk.points.Count; i++) dist += Vector2.Distance(walk.points[i - 1], walk.points[i]);
                                 float score = Mathf.Abs(opt - target) * 10f;
-                                if (walk.died) score += (n <= 8 ? 25f : 0f) + Mathf.Max(0f, 16f - dist) * 2f; // time to react before a fall
+                                if (n < 8)
+                                {
+                                    // learning levels: a fair start, no rush
+                                    if (walk.died) score += 25f + Mathf.Max(0f, 16f - dist) * 2f;
+                                }
+                                else
+                                {
+                                    // from level 8 the hero heads for danger unless you act: time pressure, but always enough
+                                    // walk (hero speed 2.6/s, plus the 3 s countdown) to make the needed slides
+                                    float need = 5f + opt * 1.4f;
+                                    if (!walk.died) score += n >= 15 ? 12f : 6f;
+                                    else if (dist < need) score += (need - dist) * 3f;
+                                    else score += Mathf.Max(0f, dist - need - 14f) * 0.5f; // not so far away that it is no pressure at all
+                                }
                                 int deadly = 0; foreach (var r in lv.rooms) if (r.Deadly) deadly++;
-                                if (n >= 7 && deadly == 0) score += 4f; // later levels should have traps to avoid
+                                if (n >= 6 && deadly < 2) score += (2 - deadly) * 4f; // later levels should have traps to avoid
                                 if (score < bestScore) { bestScore = score; best = lv; bestOpt = opt; }
-                                if (k % 8 == 7) yield return null;
+                                yield return null;
                             }
                             if (best == null) { report.Append($"L{n}:NONE "); table.Append("            { 0, 0 }," + System.Environment.NewLine); continue; }
                             int par = bestOpt + (n <= 6 ? 1 : 2);
