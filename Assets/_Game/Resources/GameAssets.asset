@@ -1782,5 +1782,9 @@ MonoBehaviour:
   water: {fileID: 2100000, guid: 9d4d3d87c6dd27f4f832a186bb29c783, type: 2}
   irisWipe: {fileID: 2100000, guid: 0c21d49b6230a144a8fde771d49f92cb, type: 2}
   trekPath: {fileID: 2100000, guid: dde0b14a711cfd143ac6993dce4cfbdd, type: 2}
+  textTitle: {fileID: 2100000, guid: 1684edbc905ca1f4380df1d80ac8851f, type: 2}
+  textHeading: {fileID: 2100000, guid: 2a14b52e442d5ca4fb04c0f7a5bfbbeb, type: 2}
+  textBody: {fileID: 2100000, guid: 761b0f070db692d4a985b2071fbe0bab, type: 2}
+  textWorld: {fileID: 2100000, guid: 082e8061224f8e143a18bc7db4ca6839, type: 2}
   logo: {fileID: 21300000, guid: e3c6b0189b989cf4bbea45e1a747c1da, type: 3}
   font: {fileID: 11400000, guid: 24b2b3902baf39441abadb6e08221c9e, type: 2}

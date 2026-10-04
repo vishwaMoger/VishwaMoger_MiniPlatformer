@@ -31,6 +31,8 @@ namespace MiniPlatformer
         public Material water;
         public Material irisWipe;
         public Material trekPath;
+        // saved text materials (outline / drop shadow on): runtime-only materials lose these shader features in builds
+        public Material textTitle, textHeading, textBody, textWorld;
 
         [Header("Branding")]
         public Sprite logo;

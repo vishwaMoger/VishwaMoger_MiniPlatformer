@@ -309,6 +309,36 @@ namespace MiniPlatformer.EditorTools
             return u >= 0 && int.TryParse(s.name.Substring(u + 1), out int i) ? i : 0;
         }
 
+        /// <summary>
+        /// Saves the UI / world text materials as assets and registers them in GameAssets. The font's SDF shader turns
+        /// outline and drop shadow on with shader_feature keywords, which a build strips unless a saved material uses them.
+        /// </summary>
+        [MenuItem("Tools/Fruit Quest/Save Text Materials")]
+        public static void SaveTextMaterials() => SaveTextMaterials(AssetDatabase.LoadAssetAtPath<GameAssets>(AssetsPath));
+
+        static void SaveTextMaterials(GameAssets ga)
+        {
+            if (ga == null || ga.font == null) return;
+            Material Make(string name, (float, bool, float) spec)
+            {
+                string path = Rendering + "/Text_" + name + ".mat";
+                var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (m == null) { m = new Material(ga.font.material); AssetDatabase.CreateAsset(m, path); }
+                else { m.shader = ga.font.material.shader; m.CopyPropertiesFromMaterial(ga.font.material); }
+                UIKit.ConfigureText(m, spec);
+                EditorUtility.SetDirty(m);
+                return m;
+            }
+            ga.textTitle = Make("Title", UIKit.TitleSpec);
+            ga.textHeading = Make("Heading", UIKit.HeadingSpec);
+            ga.textBody = Make("Body", UIKit.BodySpec);
+            ga.textWorld = Make("World", UIKit.WorldSpec);
+            EditorUtility.SetDirty(ga);
+            // save only these assets: a global SaveAssets would also write the font's dynamic glyph cache to disk
+            foreach (var m in new[] { ga.textTitle, ga.textHeading, ga.textBody, ga.textWorld }) AssetDatabase.SaveAssetIfDirty(m);
+            AssetDatabase.SaveAssetIfDirty(ga);
+        }
+
         static void BuildGameAssets()
         {
             Directory.CreateDirectory(Root + "/Resources");
@@ -351,6 +381,7 @@ namespace MiniPlatformer.EditorTools
             ga.irisWipe = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_IrisWipe.mat");
             ga.trekPath = AssetDatabase.LoadAssetAtPath<Material>(Rendering + "/M_TrekPath.mat");
             ga.font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+            SaveTextMaterials(ga);
             ga.logo = AssetDatabase.LoadAssetAtPath<Sprite>(Root + "/Art/Branding/logo.png");
             EditorUtility.SetDirty(ga);
             Debug.Log($"[FruitQuest] Registry: {ga.sprites.Count} sprite sets, {ga.textures.Count} textures, {ga.clips.Count} clips, {ga.levels.Count} levels.");

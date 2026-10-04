@@ -25,17 +25,36 @@ namespace MiniPlatformer
         {
             if (s_Title == null)
             {
-                s_Title = MakeMat(0.32f, Outline, true, 0.9f);
-                s_Heading = MakeMat(0.24f, Outline, true, 0.6f);
-                s_Body = MakeMat(0.18f, Outline, true, 0.45f);
+                // prefer the saved materials (GameAssets): only they keep the outline / underlay variants in a build
+                var ga = GameAssets.I;
+                s_Title = ga.textTitle != null ? ga.textTitle : MakeMat(TitleSpec);
+                s_Heading = ga.textHeading != null ? ga.textHeading : MakeMat(HeadingSpec);
+                s_Body = ga.textBody != null ? ga.textBody : MakeMat(BodySpec);
                 s_Dark = new Material(Font.material);
             }
             return s switch { TextStyle.Title => s_Title, TextStyle.Heading => s_Heading, TextStyle.Body => s_Body, _ => s_Dark };
         }
 
-        static Material MakeMat(float outline, Color outlineColor, bool underlay, float offset)
+        // outline width, underlay (drop shadow) on, shadow offset
+        public static readonly (float outline, bool underlay, float offset) TitleSpec = (0.32f, true, 0.9f), HeadingSpec = (0.24f, true, 0.6f),
+            BodySpec = (0.18f, true, 0.45f), WorldSpec = (0.45f, true, 0.7f); // world labels sit on dark brick: thick outline + shadow
+
+        static Material MakeMat((float outline, bool underlay, float offset) spec)
         {
             var m = new Material(Font.material);
+            ConfigureText(m, spec);
+            return m;
+        }
+
+        /// <summary>Text material for world-space labels (GOAL / START): thick outline and a drop shadow.</summary>
+        public static Material WorldTextMaterial => s_World != null ? s_World : (s_World = GameAssets.I.textWorld != null ? GameAssets.I.textWorld : MakeMat(WorldSpec));
+        static Material s_World;
+
+        /// <summary>Sets up an SDF text material (used at runtime and by the editor to save the build materials).</summary>
+        public static void ConfigureText(Material m, (float outline, bool underlay, float offset) spec)
+        {
+            float outline = spec.outline; bool underlay = spec.underlay; float offset = spec.offset;
+            Color outlineColor = Outline;
             m.EnableKeyword(ShaderUtilities.Keyword_Outline);
             m.SetFloat(ShaderUtilities.ID_OutlineWidth, outline);
             m.SetColor(ShaderUtilities.ID_OutlineColor, outlineColor);
@@ -50,7 +69,6 @@ namespace MiniPlatformer
                 m.SetFloat(ShaderUtilities.ID_UnderlayDilate, outline * 1.2f);
                 m.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.35f);
             }
-            return m;
         }
 
         public static RectTransform Rect(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, Vector2? pivot = null)

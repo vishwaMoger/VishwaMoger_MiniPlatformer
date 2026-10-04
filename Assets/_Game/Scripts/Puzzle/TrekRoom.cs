@@ -324,7 +324,7 @@ namespace MiniPlatformer
             {
                 case RoomKind.Start:
                     // a plain label: checkered flags looked like a second finish line next to the trophy
-                    WorldLabel("START", new Vector2(3.5f, 4.7f), 5.5f, new Color(0.62f, 1f, 0.62f), new Color32(16, 52, 24, 255));
+                    WorldLabel("START", new Vector2(3.5f, 4.7f), 5.5f, new Color(0.62f, 1f, 0.62f));
                     break;
                 case RoomKind.Exit:
                     TrekGoal.Create(Contents, new Vector2(3.5f, 1f));
@@ -359,7 +359,7 @@ namespace MiniPlatformer
             var center = new Vector2(Size * 0.5f, Size * 0.5f);
             m_GoalGlow = TrekArt.SlicedRenderer(transform, TrekArt.Glow, center, new Vector2(Size + 0.3f, Size + 0.3f), Sort.FX - 1, new Color(1f, 0.82f, 0.25f, 0.6f), "GoalGlow");
 
-            m_GoalLabel = WorldLabel("GOAL", new Vector2(3.5f, 4.7f), 7f, new Color(1f, 0.86f, 0.3f), new Color32(70, 34, 10, 255)).transform;
+            m_GoalLabel = WorldLabel("GOAL", new Vector2(3.5f, 4.7f), 7f, new Color(1f, 0.86f, 0.3f)).transform;
 
             // the way in glows: the exit room only opens towards the route, so every opening is an entrance
             void Door(int side, Vector2 c, Vector2 size)
@@ -372,19 +372,18 @@ namespace MiniPlatformer
             Door(RoomDef.U, new Vector2(3.5f, 6.55f), new Vector2(3.3f, 1.1f));
         }
 
-        TextMeshPro WorldLabel(string text, Vector2 at, float size, Color color, Color32 outline)
+        TextMeshPro WorldLabel(string text, Vector2 at, float size, Color color)
         {
             var go = new GameObject(text + "Label");
             go.transform.SetParent(transform, false);
             go.transform.localPosition = at;
             var tmp = go.AddComponent<TextMeshPro>();
             tmp.font = GameAssets.I.font;
+            tmp.fontSharedMaterial = UIKit.WorldTextMaterial; // saved outlined material (keeps the outline in builds)
             tmp.text = text;
             tmp.fontSize = size;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = color;
-            tmp.outlineColor = outline;
-            tmp.outlineWidth = 0.3f;
             tmp.rectTransform.sizeDelta = new Vector2(6f, 2f);
             tmp.GetComponent<MeshRenderer>().sortingOrder = Sort.WorldUI;
             return tmp;
