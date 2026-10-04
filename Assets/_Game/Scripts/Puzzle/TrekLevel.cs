@@ -72,69 +72,69 @@ namespace MiniPlatformer
         // what a seed produces, so re-run `curate 0` and `curate 1` after touching TryGenerate.
         static readonly int[,] s_Landscape =
         {
-            { 210484, 3 }, // 1: 3x2, 2 slides, route 2
-            { 106764, 4 }, // 2: 3x2, 3 slides, route 3
-            { 317231, 4 }, // 3: 3x3, 3 slides, route 3
-            { 841885, 5 }, // 4: 3x3, 4 slides, route 4
-            { 5062, 6 }, // 5: 3x3, 5 slides, route 4
-            { 1995922, 7 }, // 6: 3x3, 6 slides, route 5
-            { 6186091, 7 }, // 7: 4x3, 5 slides, route 5
-            { 531734, 8 }, // 8: 4x3, 6 slides, route 6
-            { 11215101, 9 }, // 9: 4x3, 7 slides, route 6
-            { 8178969, 10 }, // 10: 4x3, 8 slides, route 6
-            { 2105696, 10 }, // 11: 4x3, 8 slides, route 5
-            { 15616746, 11 }, // 12: 4x3, 9 slides, route 6
-            { 4202294, 12 }, // 13: 4x3, 10 slides, route 7
-            { 7449902, 13 }, // 14: 4x3, 11 slides, route 6
-            { 957713, 11 }, // 15: 4x4, 9 slides, route 7
-            { 12059996, 12 }, // 16: 4x4, 10 slides, route 10
-            { 4101601, 13 }, // 17: 4x4, 11 slides, route 6
-            { 856011, 13 }, // 18: 4x4, 11 slides, route 8
-            { 3894161, 15 }, // 19: 4x4, 13 slides, route 8
-            { 14472799, 15 }, // 20: 4x4, 13 slides, route 8
-            { 2325244, 16 }, // 21: 4x4, 14 slides, route 10
-            { 2745169, 17 }, // 22: 4x4, 15 slides, route 8
-            { 3269823, 14 }, // 23: 5x4, 12 slides, route 8
-            { 128962, 15 }, // 24: 5x4, 13 slides, route 9
-            { 4214402, 16 }, // 25: 5x4, 14 slides, route 10
-            { 864083, 17 }, // 26: 5x4, 15 slides, route 10
-            { 10081244, 18 }, // 27: 5x4, 16 slides, route 9
-            { 5369448, 19 }, // 28: 5x4, 17 slides, route 13
-            { 10292720, 20 }, // 29: 5x4, 18 slides, route 9
-            { 7884962, 22 }, // 30: 5x4, 20 slides, route 10
+            { 10369197, 3 }, // 1: 3x2, 2 slides, route 2
+            { 16235030, 4 }, // 2: 3x2, 3 slides, route 3
+            { 5448952, 4 }, // 3: 3x3, 3 slides, route 3
+            { 13828281, 5 }, // 4: 3x3, 4 slides, route 4
+            { 6184073, 7 }, // 5: 3x3, 6 slides, route 4
+            { 1681735, 7 }, // 6: 3x3, 6 slides, route 5
+            { 5348259, 7 }, // 7: 4x3, 5 slides, route 5
+            { 8281680, 8 }, // 8: 4x3, 6 slides, route 6
+            { 19907608, 9 }, // 9: 4x3, 7 slides, route 6
+            { 17814037, 10 }, // 10: 4x3, 8 slides, route 5
+            { 6085398, 10 }, // 11: 4x3, 8 slides, route 4
+            { 4096556, 11 }, // 12: 4x3, 9 slides, route 7
+            { 15303568, 12 }, // 13: 4x3, 10 slides, route 5
+            { 18970092, 13 }, // 14: 4x3, 11 slides, route 6
+            { 21903513, 11 }, // 15: 4x4, 9 slides, route 8
+            { 2948573, 12 }, // 16: 4x4, 10 slides, route 9
+            { 3682685, 13 }, // 17: 4x4, 11 slides, route 9
+            { 38977367, 14 }, // 18: 4x4, 12 slides, route 11
+            { 19498782, 15 }, // 19: 4x4, 13 slides, route 10
+            { 48614453, 16 }, // 20: 4x4, 14 slides, route 10
+            { 12588686, 16 }, // 21: 4x4, 14 slides, route 7
+            { 3059356, 17 }, // 22: 4x4, 15 slides, route 8
+            { 19293360, 13 }, // 23: 5x4, 11 slides, route 11
+            { 4422851, 15 }, // 24: 5x4, 13 slides, route 8
+            { 17096069, 16 }, // 25: 5x4, 14 slides, route 8
+            { 5786346, 17 }, // 26: 5x4, 15 slides, route 9
+            { 18250106, 18 }, // 27: 5x4, 16 slides, route 8
+            { 10396440, 19 }, // 28: 5x4, 17 slides, route 12
+            { 10187991, 19 }, // 29: 5x4, 17 slides, route 10
+            { 17205843, 22 }, // 30: 5x4, 20 slides, route 13
         };
         static readonly int[,] s_Portrait =
         {
-            { 1153045, 3 }, // 1: 2x3, 2 slides, route 2
-            { 2035, 4 }, // 2: 2x3, 3 slides, route 3
-            { 317231, 4 }, // 3: 3x3, 3 slides, route 3
-            { 841885, 5 }, // 4: 3x3, 4 slides, route 4
-            { 5062, 6 }, // 5: 3x3, 5 slides, route 4
-            { 1995922, 7 }, // 6: 3x3, 6 slides, route 5
+            { 8169888, 3 }, // 1: 2x3, 2 slides, route 2
+            { 4191195, 3 }, // 2: 2x3, 2 slides, route 3
+            { 5448952, 4 }, // 3: 3x3, 3 slides, route 3
+            { 13828281, 5 }, // 4: 3x3, 4 slides, route 4
+            { 6184073, 7 }, // 5: 3x3, 6 slides, route 4
+            { 1681735, 7 }, // 6: 3x3, 6 slides, route 5
             { 5662446, 7 }, // 7: 3x4, 5 slides, route 5
             { 6920203, 8 }, // 8: 3x4, 6 slides, route 6
-            { 5873922, 9 }, // 9: 3x4, 7 slides, route 6
-            { 15614728, 10 }, // 10: 3x4, 8 slides, route 7
-            { 4933379, 10 }, // 11: 3x4, 8 slides, route 7
-            { 2211434, 11 }, // 12: 3x4, 9 slides, route 6
-            { 13134, 12 }, // 13: 3x4, 10 slides, route 8
-            { 5564780, 13 }, // 14: 3x4, 11 slides, route 7
-            { 957713, 11 }, // 15: 4x4, 9 slides, route 7
-            { 12059996, 12 }, // 16: 4x4, 10 slides, route 10
-            { 4101601, 13 }, // 17: 4x4, 11 slides, route 6
-            { 856011, 13 }, // 18: 4x4, 11 slides, route 8
-            { 3894161, 15 }, // 19: 4x4, 13 slides, route 8
-            { 14472799, 15 }, // 20: 4x4, 13 slides, route 8
-            { 2325244, 16 }, // 21: 4x4, 14 slides, route 10
-            { 2745169, 17 }, // 22: 4x4, 15 slides, route 8
-            { 12590704, 14 }, // 23: 4x5, 12 slides, route 12
-            { 2118813, 15 }, // 24: 4x5, 13 slides, route 9
-            { 1596177, 16 }, // 25: 4x5, 14 slides, route 13
-            { 2225560, 17 }, // 26: 4x5, 15 slides, route 9
-            { 10709618, 17 }, // 27: 4x5, 15 slides, route 9
-            { 6626196, 18 }, // 28: 4x5, 16 slides, route 13
-            { 8093411, 20 }, // 29: 4x5, 18 slides, route 10
-            { 2962699, 22 }, // 30: 4x5, 20 slides, route 13
+            { 19802879, 9 }, // 9: 3x4, 7 slides, route 6
+            { 42215894, 10 }, // 10: 3x4, 8 slides, route 7
+            { 14463718, 10 }, // 11: 3x4, 8 slides, route 6
+            { 12055960, 11 }, // 12: 3x4, 9 slides, route 7
+            { 37296658, 12 }, // 13: 3x4, 10 slides, route 8
+            { 14152558, 13 }, // 14: 3x4, 11 slides, route 8
+            { 21903513, 11 }, // 15: 4x4, 9 slides, route 8
+            { 15830240, 12 }, // 16: 4x4, 10 slides, route 8
+            { 3682685, 13 }, // 17: 4x4, 11 slides, route 9
+            { 38977367, 14 }, // 18: 4x4, 12 slides, route 11
+            { 19498782, 15 }, // 19: 4x4, 13 slides, route 10
+            { 48614453, 16 }, // 20: 4x4, 14 slides, route 10
+            { 12588686, 16 }, // 21: 4x4, 14 slides, route 7
+            { 3059356, 17 }, // 22: 4x4, 15 slides, route 8
+            { 5154945, 14 }, // 23: 4x5, 12 slides, route 9
+            { 11439694, 15 }, // 24: 4x5, 13 slides, route 11
+            { 13325825, 15 }, // 25: 4x5, 13 slides, route 9
+            { 14374124, 17 }, // 26: 4x5, 15 slides, route 14
+            { 15317694, 18 }, // 27: 4x5, 16 slides, route 12
+            { 132998, 19 }, // 28: 4x5, 17 slides, route 10
+            { 15843357, 20 }, // 29: 4x5, 18 slides, route 15
+            { 7570775, 22 }, // 30: 4x5, 20 slides, route 10
         };
 
         /// <summary>Campaign level n (1-30) in the board shape for this screen.</summary>
@@ -453,6 +453,8 @@ namespace MiniPlatformer
         }
 
         List<int> m_LastPath;
+        /// <summary>The slides (cells moved into the hole) of the last SolutionLength / HintMove search.</summary>
+        public List<int> LastSolution => m_LastPath;
 
         public int HintMove(int[] current, int budget = 120000, long timeLimitMs = long.MaxValue)
         {

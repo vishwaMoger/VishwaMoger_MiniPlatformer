@@ -190,9 +190,27 @@ namespace MiniPlatformer
                 if (m_HintLeft <= 0f) { if (m_HintRoom != null) m_HintRoom.SetHint(false); m_HintRoom = null; }
             }
             if (Time.timeScale > 0f && !AutoSolving) HandleInput();
+            CheckVoid(dt);
             m_PathTimer -= Time.unscaledDeltaTime;
             if (m_PathTimer <= 0f) { m_PathTimer = 0.2f; UpdatePath(false); }
             if (Mathf.Abs(m_Cam.aspect - m_Aspect) > 0.01f) FitCamera();
+        }
+
+        float m_InVoid;
+
+        /// <summary>
+        /// A hero who drops into the empty slot has fallen into the void. Physics could let them land on the roof of the
+        /// room below and walk around inside the slot, where nothing can ever slide in again (a dead end the route
+        /// simulation already treats as a fall), so they fall for real. Skipped mid-slide: a carried hero briefly sits
+        /// over the cell their room just left.
+        /// </summary>
+        void CheckVoid(float dt)
+        {
+            if (Hero == null || Hero.Dead || Hero.Won || m_Sliding || AutoSolving || Hero.Carried) { m_InVoid = 0f; return; }
+            int c = CellAt(Hero.transform.position);
+            bool inVoid = c >= 0 && c == m_Empty;
+            m_InVoid = inVoid ? m_InVoid + dt : 0f;
+            if (m_InVoid > 0.12f) Hero.Die(true);
         }
 
         // ------------------------------------------------------------------ route, progress, completion

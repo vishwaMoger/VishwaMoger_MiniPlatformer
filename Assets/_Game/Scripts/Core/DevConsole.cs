@@ -163,20 +163,55 @@ namespace MiniPlatformer
                         m_Measure = sb.ToString();
                         break;
                     }
+                    case "humantest":
+                    {
+                        // humantest <from> <to> [slideGap]: like a player who starts thinking only once the hero walks:
+                        // after the countdown, one hint slide per gap until the level ends. Reports deaths.
+                        var sb = new StringBuilder();
+                        int ok = 0, total = 0;
+                        float gap = F(3, 1f);
+                        for (int n = (int)F(1, 1); n <= (int)F(2, 7); n++)
+                        {
+                            Game.I.PlayLevel(n);
+                            yield return new WaitForSecondsRealtime(1.4f);
+                            var bd = Game.I.Board;
+                            if (bd == null || bd.Level.number != n) { sb.Append($"L{n}:noload "); continue; }
+                            while (bd != null && !bd.Started) yield return null;
+                            float t0 = Time.time;
+                            while (bd != null && !bd.Finished && Time.time - t0 < 90f)
+                            {
+                                yield return new WaitForSeconds(gap);
+                                if (bd == null || bd.Finished || bd.PathComplete) continue;
+                                int c = bd.HeroHint(out bool rescue);
+                                if (rescue) { bd.ShowHint(); continue; } // the game's hint hops a stranded hero back to the start
+                                if (c >= 0) bd.TrySlideFrom(c);
+                            }
+                            total++;
+                            if (bd != null && bd.Hero != null && bd.Hero.Won) ok++;
+                            else sb.Append($"L{n}:{(bd != null && bd.Hero != null && bd.Hero.Dead ? "died" : "timeout")}@{bd?.Slides} ");
+                            yield return new WaitForSecondsRealtime(1.6f);
+                        }
+                        m_Measure = $"humantest {ok}/{total} won. " + sb;
+                        break;
+                    }
                     case "curate":
                     {
-                        // curate <portrait 0|1> [candidates]: for each campaign level, generate many candidates and keep
-                        // the one closest to the difficulty curve with a fair start; writes the {seed, par} table.
+                        // curate <portrait 0|1> [candidates] [budget] [from] [to] [tries]: for each campaign level, score many
+                        // candidates (difficulty curve, fair start, pressure), then PLAY the best ones live at 4x speed as a
+                        // slow player following the hint, and keep the first one that player wins. Writes the {seed, par} table.
                         bool portrait = F(1) > 0f;
                         int candidates = (int)F(2, 80);
                         int budget = (int)F(3, 1500000);
                         int fromN = (int)F(4, 1), toN = (int)F(5, TrekLevel.CampaignLength);
+                        int tries = (int)F(6, 10);
+                        Game.ForcePortrait = portrait;
                         var table = new StringBuilder();
                         var report = new StringBuilder();
                         for (int n = fromN; n <= toN; n++)
                         {
                             int target = TrekLevel.TargetSlides[n - 1];
                             TrekLevel best = null; int bestOpt = -1; float bestScore = float.MaxValue;
+                            var ranked = new System.Collections.Generic.List<(float score, TrekLevel lv, int opt)>();
                             for (int k = 0; k < candidates; k++)
                             {
                                 var lv = TrekLevel.Generate(n, n * 1009 + 17 + k * 104729, false, portrait);
@@ -191,26 +226,55 @@ namespace MiniPlatformer
                                 {
                                     // learning levels: a fair start, no rush
                                     if (walk.died) score += 25f + Mathf.Max(0f, 16f - dist) * 2f;
+                                    // the hero starts out on the planned route, not wandering into a side room
+                                    foreach (int c in walk.cells) if (lv.layout[c] >= lv.pathLength) { score += 30f; break; }
+                                    // and no trap moves: no slide of the solution may send the hero (still at the start)
+                                    // to their death, e.g. by pulling the room out from under the start room
+                                    var sol = lv.LastSolution != null ? new System.Collections.Generic.List<int>(lv.LastSolution) : null;
+                                    if (sol != null)
+                                    {
+                                        var lay = (int[])lv.layout.Clone();
+                                        foreach (int c in sol)
+                                        {
+                                            int hole = System.Array.IndexOf(lay, -1);
+                                            lay[hole] = lay[c]; lay[c] = -1;
+                                            if (lv.WalkFromStart(lay).died) { score += 40f; break; }
+                                        }
+                                    }
                                 }
                                 else
                                 {
                                     // from level 8 the hero heads for danger unless you act: time pressure, but always enough
                                     // walk (hero speed 2.6/s, plus the 3 s countdown) to make the needed slides
-                                    float need = 5f + opt * 1.4f;
+                                    // about a second of walking per slide (hero walks 2.6 units/s), counted after the countdown
+                                    float need = 6f + opt * 2.6f;
                                     if (!walk.died) score += n >= 15 ? 12f : 6f;
                                     else if (dist < need) score += (need - dist) * 3f;
-                                    else score += Mathf.Max(0f, dist - need - 14f) * 0.5f; // not so far away that it is no pressure at all
+                                    else score += Mathf.Max(0f, dist - need - 18f) * 0.5f; // not so far away that it is no pressure at all
                                 }
                                 int deadly = 0; foreach (var r in lv.rooms) if (r.Deadly) deadly++;
                                 if (n >= 6 && deadly < 2) score += (2 - deadly) * 4f; // later levels should have traps to avoid
-                                if (score < bestScore) { bestScore = score; best = lv; bestOpt = opt; }
+                                ranked.Add((score, lv, opt));
                                 yield return null;
                             }
+                            ranked.Sort((a, b) => a.score.CompareTo(b.score));
+                            // live check: the slow player gets less thinking time per slide as the campaign goes on
+                            float gap = n <= 10 ? 1.3f : n <= 20 ? 1.1f : 0.9f;
+                            bool passed = false;
+                            for (int i = 0; i < ranked.Count && i < tries && !passed; i++)
+                            {
+                                if (ranked[i].score >= 30f) break; // off the curve: not worth playing
+                                var res = new bool[1];
+                                yield return LivePlay(ranked[i].lv, gap, res);
+                                if (res[0]) { passed = true; best = ranked[i].lv; bestOpt = ranked[i].opt; bestScore = ranked[i].score; }
+                            }
+                            if (!passed && ranked.Count > 0) { best = ranked[0].lv; bestOpt = ranked[0].opt; bestScore = 99f; }
                             if (best == null) { report.Append($"L{n}:NONE "); table.Append("            { 0, 0 }," + System.Environment.NewLine); continue; }
                             int par = bestOpt + (n <= 6 ? 1 : 2);
                             table.Append($"            {{ {best.seed}, {par} }}, // {n}: {best.w}x{best.h}, {bestOpt} slides, route {best.pathLength}" + System.Environment.NewLine);
-                            report.Append($"L{n}:{bestOpt}/{target}{(bestScore >= 10f ? "!" : "")} ");
+                            report.Append($"L{n}:{bestOpt}/{target}{(passed ? "" : "X")} ");
                         }
+                        Game.ForcePortrait = null;
                         File.WriteAllText($"Temp/campaign_{(portrait ? "portrait" : "landscape")}.txt", table.ToString());
                         m_Measure = $"curate {(portrait ? "portrait" : "landscape")}: " + report;
                         break;
@@ -318,6 +382,33 @@ namespace MiniPlatformer
             }
             WriteState();
             m_Running = false;
+        }
+
+        /// <summary>Plays a level live at 4x speed as a slow player who follows the hint, one slide per gap (game seconds).</summary>
+        static IEnumerator LivePlay(TrekLevel lv, float gap, bool[] won)
+        {
+            won[0] = false;
+            Game.LevelOverride = lv;
+            Game.I.PlayLevel(lv.number);
+            yield return new WaitForSecondsRealtime(0.3f);
+            for (float t = 0f; t < 12f && (Game.I.Busy || Game.I.Board == null || Game.I.Board.Level != lv); t += Time.unscaledDeltaTime) yield return null;
+            Game.LevelOverride = null;
+            var bd = Game.I.Board;
+            if (bd == null || bd.Level != lv) yield break;
+            Time.timeScale = 4f;
+            while (bd != null && !bd.Started) yield return null;
+            float t0 = Time.time;
+            while (bd != null && !bd.Finished && Time.time - t0 < 90f)
+            {
+                yield return new WaitForSeconds(gap);
+                if (bd == null || bd.Finished || bd.PathComplete) continue;
+                int c = bd.HeroHint(out bool rescue);
+                if (rescue) { bd.ShowHint(); continue; }
+                if (c >= 0) bd.TrySlideFrom(c);
+            }
+            won[0] = bd != null && bd.Hero != null && bd.Hero.Won;
+            Time.timeScale = 1f;
+            yield return new WaitForSecondsRealtime(0.3f);
         }
 
         static void WriteState()

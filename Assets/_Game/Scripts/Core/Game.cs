@@ -289,7 +289,11 @@ namespace MiniPlatformer
         /// <summary>Editor capture (trailer / covers) picks the board shape regardless of the window.</summary>
         public static bool? ForcePortrait;
 
+        /// <summary>Editor curation: play this exact level instead of the campaign table's.</summary>
+        public static TrekLevel LevelOverride;
+
         public static TrekLevel BuildLevel(int level, bool daily) =>
+            !daily && LevelOverride != null ? LevelOverride :
             daily ? TrekLevel.Generate(20, Economy.Today * 7331 + 11, true, PortraitLevels) : TrekLevel.Campaign(level, PortraitLevels);
 
         /// <summary>What PLAY starts: the next new level, or once all are beaten the first one still missing stars.</summary>
