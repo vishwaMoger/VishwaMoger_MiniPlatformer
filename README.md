@@ -1,7 +1,26 @@
-# Fruit Quest (VishwaMoger_MiniPlatformer)
+# Fruit Quest
+
+![Fruit Quest](docs/media/cover.png)
+
+**Hop, dash and wall-jump through 15 pixel levels, grab every fruit and beat the Skull King!**
+
+[**Play free in your browser on itch.io**](https://bluelolipop1.itch.io/fruit-quest) &nbsp;·&nbsp;
+[**Download (Android APK, web build, trailer)**](https://github.com/vishwaMoger/VishwaMoger_MiniPlatformer/releases/tag/fruit-quest-v1)
+
+![Fruit Quest gameplay](docs/media/trailer.gif)
 
 A 2D pixel-art platformer for Unity 6.3 (URP 2D): 15 levels across 5 worlds, a boss fight,
-4 unlockable heroes, and a smooth, modern UI.
+4 unlockable heroes, and a smooth, modern UI. The full 1080p trailer is on the
+[release page](https://github.com/vishwaMoger/VishwaMoger_MiniPlatformer/releases/tag/fruit-quest-v1).
+
+| | |
+|---|---|
+| ![Sunny Shores](docs/media/screenshot_1_shores.jpg) | ![Autumn Woods](docs/media/screenshot_2_woods.jpg) |
+| ![Sunset Peaks](docs/media/screenshot_3_peaks.jpg) | ![Jungle Ruins](docs/media/screenshot_4_ruins.jpg) |
+| ![Moonlit Castle](docs/media/screenshot_5_castle.jpg) | |
+
+> This branch (`fruit-quest-crazygames`, tag `fruit-quest-v1`) holds Fruit Quest. The same repository's
+> `tile-trek` branch holds **Tile Trek**, a live sliding-room puzzle built afterwards from this project.
 
 ## Play
 
@@ -75,6 +94,13 @@ If you add or replace art or audio, run **Tools > Fruit Quest > Run Full Setup**
 - Store kit (covers, trailers, texts): `Builds/CrazyGames_Submission`. Regenerate in play mode with the dev console:
   `cover 0`, `clip <name> <level> <sec> <w> <h> <halfWidth>`, `trailer <out.mp4> <w> <h> <cover.png> <clip:start:count>...`
 - Android: switch the platform back to Android before `Tools/u.sh` APK builds.
+
+## itch.io (web)
+
+- Build: **Tools > Fruit Quest > itch.io Build** -> `Builds/Itch/WebGL`. Same game, but the CrazyGames SiteLock
+  whitelists itch's domains and the files use gzip with decompression fallback (itch.io sends no
+  Content-Encoding headers). The CrazyGames settings are restored afterwards.
+- Upload with [butler](https://itch.io/docs/butler/): `butler push Builds/Itch/WebGL bluelolipop1/fruit-quest:html5`
 
 ## Credits (all free for commercial use)
 

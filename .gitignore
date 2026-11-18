@@ -73,3 +73,6 @@ crashlytics-build.properties
 
 # Unity build scratch space
 /.utmp/
+
+# local publishing tools (butler, gh)
+/Tools/bin/
