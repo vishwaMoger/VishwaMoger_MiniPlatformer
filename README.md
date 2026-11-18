@@ -1,4 +1,26 @@
-# Tile Trek (VishwaMoger_MiniPlatformer)
+# Tile Trek
+
+![Tile Trek](docs/media/cover.png)
+
+**Your hero never stops walking. Slide the rooms to build their path to the trophy, live!**
+
+[**Play free in your browser on itch.io**](https://bluelolipop1.itch.io/tile-trek) &nbsp;·&nbsp;
+[**Release: trailer and cover**](https://github.com/vishwaMoger/VishwaMoger_MiniPlatformer/releases/tag/tile-trek-v1)
+
+![Tile Trek gameplay](docs/media/trailer.gif)
+
+| | |
+|---|---|
+| ![Spring Meadow](docs/media/screenshot_1_spring.jpg) | ![Autumn Woods](docs/media/screenshot_2_autumn.jpg) |
+| ![Rainy Peaks](docs/media/screenshot_3_rain.jpg) | ![Firefly Night](docs/media/screenshot_4_night_solving.jpg) |
+| ![Snowy Castle](docs/media/screenshot_5_snow.jpg) | |
+
+> This branch (`tile-trek`, tag `tile-trek-v1`) holds Tile Trek. The same repository's `fruit-quest-crazygames`
+> branch holds **Fruit Quest**, the pixel platformer this project started as
+> ([play it on itch.io](https://bluelolipop1.itch.io/fruit-quest)).
+
+## About
+
 
 A live sliding-tile puzzle for Unity 6.3 (URP 2D). The level is a grid of small pixel rooms with one empty slot.
 Your hero walks on their own: forward, up one-tile ledges, around at walls, down through floor holes. You never
@@ -63,6 +85,12 @@ Editor-only dev console (`Temp/devcmd.txt`, `Tools/dev.sh`): `level N`, `daily`,
 `hint`, `path`, `gen A B` (generator report), `autotest A B` (solves each level and checks the hero reaches the trophy),
 `hintstress A B N [portrait]` (follows hints from many mid-game states), `curate 0|1` (re-picks the campaign levels),
 `cover` / `clip` / `sheet` / `trailer` (store assets, see `DevCapture.cs` and `Tools/trailer.sh`).
+
+## itch.io (web)
+
+- Build: **Tools > Fruit Quest > itch.io Build** -> `Builds/Itch/WebGL` (SiteLock whitelists itch's domains, gzip
+  with decompression fallback; the CrazyGames settings are restored afterwards).
+- Upload with [butler](https://itch.io/docs/butler/): `butler push Builds/Itch/WebGL bluelolipop1/tile-trek:html5`
 
 ## CrazyGames (web)
 
