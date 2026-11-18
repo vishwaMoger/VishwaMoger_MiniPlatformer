@@ -81,3 +81,6 @@ crashlytics-build.properties
 # temporary files the Unity Performance Testing package writes during builds
 /Assets/Resources/PerformanceTestRun*
 /Assets/Resources.meta
+
+# local publishing tools (butler, gh)
+/Tools/bin/
