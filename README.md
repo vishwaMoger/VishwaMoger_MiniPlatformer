@@ -5,7 +5,7 @@
 **Your hero never stops walking. Slide the rooms to build their path to the trophy, live!**
 
 [**Play free in your browser on itch.io**](https://bluelolipop1.itch.io/tile-trek) &nbsp;·&nbsp;
-[**Release: trailer and cover**](https://github.com/vishwaMoger/VishwaMoger_MiniPlatformer/releases/tag/tile-trek-v1)
+[**Release: trailer and cover**](https://github.com/vishwaMoger/TileTrek/releases/tag/tile-trek-v1)
 
 ![Tile Trek gameplay](docs/media/trailer.gif)
 
@@ -15,8 +15,7 @@
 | ![Rainy Peaks](docs/media/screenshot_3_rain.jpg) | ![Firefly Night](docs/media/screenshot_4_night_solving.jpg) |
 | ![Snowy Castle](docs/media/screenshot_5_snow.jpg) | |
 
-> This branch (`tile-trek`, tag `tile-trek-v1`) holds Tile Trek. The same repository's `fruit-quest-crazygames`
-> branch holds **Fruit Quest**, the pixel platformer this project started as
+> Also by me: **[Fruit Quest](https://github.com/vishwaMoger/FruitQuest)**, the pixel platformer this project started as
 > ([play it on itch.io](https://bluelolipop1.itch.io/fruit-quest)).
 
 ## About
