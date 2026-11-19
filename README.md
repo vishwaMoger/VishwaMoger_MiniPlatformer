@@ -5,13 +5,13 @@
 **Hop, dash and wall-jump through 15 pixel levels, grab every fruit and beat the Skull King!**
 
 [**Play free in your browser on itch.io**](https://bluelolipop1.itch.io/fruit-quest) &nbsp;·&nbsp;
-[**Download (Android APK, web build, trailer)**](https://github.com/vishwaMoger/VishwaMoger_MiniPlatformer/releases/tag/fruit-quest-v1)
+[**Release: trailer and cover**](https://github.com/vishwaMoger/FruitQuest/releases/tag/fruit-quest-v1) (the Android APK is on the itch.io page)
 
 ![Fruit Quest gameplay](docs/media/trailer.gif)
 
 A 2D pixel-art platformer for Unity 6.3 (URP 2D): 15 levels across 5 worlds, a boss fight,
 4 unlockable heroes, and a smooth, modern UI. The full 1080p trailer is on the
-[release page](https://github.com/vishwaMoger/VishwaMoger_MiniPlatformer/releases/tag/fruit-quest-v1).
+[release page](https://github.com/vishwaMoger/FruitQuest/releases/tag/fruit-quest-v1).
 
 | | |
 |---|---|
@@ -19,8 +19,8 @@ A 2D pixel-art platformer for Unity 6.3 (URP 2D): 15 levels across 5 worlds, a b
 | ![Sunset Peaks](docs/media/screenshot_3_peaks.jpg) | ![Jungle Ruins](docs/media/screenshot_4_ruins.jpg) |
 | ![Moonlit Castle](docs/media/screenshot_5_castle.jpg) | |
 
-> This branch (`fruit-quest-crazygames`, tag `fruit-quest-v1`) holds Fruit Quest. The same repository's
-> `tile-trek` branch holds **Tile Trek**, a live sliding-room puzzle built afterwards from this project.
+> Also by me: **[Tile Trek](https://github.com/vishwaMoger/TileTrek)**, a live sliding-room puzzle built afterwards
+> from this project ([play it on itch.io](https://bluelolipop1.itch.io/tile-trek)).
 
 ## Play
 
