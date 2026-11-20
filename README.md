@@ -11,7 +11,30 @@
   <img src="https://img.shields.io/badge/C%23-Gameplay-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
   <img src="https://img.shields.io/badge/Genre-2D%20Platformer-1D976C?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Art-Pixel-56CCF2?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Grew%20Into-Fruit%20Quest%20%2B%20Tile%20Trek-FF5E9C?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Controls-Keyboard%20%2B%20Touch-93F9B9?style=for-the-badge&logoColor=black" />
+</p>
+
+---
+
+<h2 align="center">🚀 THIS PROTOTYPE GREW UP!</h2>
+
+<p align="center">
+  <img width="100%" src="docs/readme/evolution.svg" alt="Evolution: Mini Platformer became Fruit Quest, which became Tile Trek" />
+</p>
+
+<p align="center">
+  Mini Platformer was my first Unity platformer. It became the base for two released games:
+</p>
+
+<p align="center">
+  <a href="https://bluelolipop1.itch.io/fruit-quest"><img width="49%" src="docs/readme/fruit-quest.svg" alt="Fruit Quest: pixel-art platformer with 15 levels, a boss and 4 heroes. Play free on itch.io" /></a>
+  <a href="https://bluelolipop1.itch.io/tile-trek"><img width="49%" src="docs/readme/tile-trek.svg" alt="Tile Trek: live sliding-room puzzle with 30 levels. Play free on itch.io" /></a>
+</p>
+
+<p align="center">
+  <sub>Source: <a href="https://github.com/vishwaMoger/FruitQuest"><b>FruitQuest</b></a> · <a href="https://github.com/vishwaMoger/TileTrek"><b>TileTrek</b></a>
+  &nbsp;·&nbsp; This repo keeps the original 2-level prototype below.</sub>
 </p>
 
 ---
